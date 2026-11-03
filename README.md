@@ -2,24 +2,26 @@
 
 밴드 음악을 좋아하는 사람들이 각자의 지하 라이브클럽을 운영하고, 서로의 클럽에 놀러 가는 사이트.
 
-## 지금 들어 있는 것 (프로토타입)
+## 구성
 
-- 픽셀 렌더링 3D 라이브클럽과 홍대 거리 (Three.js)
-- 유령 캐릭터, 터치·클릭 이동, 클럽 주인 왕관
-- 거리: 클럽 입장, 빈 공간에서 내 클럽 만들기, 말풍선
-- 클럽 설정: 공간 · 무대 · 조명 · 클럽 정보 · 플레이리스트 · 클럽 삭제
-- 플레이리스트: 실제 시계 기준으로 모두가 같은 곡의 같은 순간을 들음 (셔플은 날마다 같은 순서)
+| 파일 | 역할 |
+|---|---|
+| `index.html` | 3D 거리·클럽, 로그인, 클럽 설정 전부 |
+| `config.js` | Supabase 주소와 공개 키, 예시 데이터 스위치 |
+| `netlify/functions/auth.mjs` | 아이디로 로그인 (이메일을 브라우저에 노출하지 않음) |
+| `supabase/schema.sql` | 데이터베이스 테이블과 보안 규칙 |
 
-현재 데이터는 브라우저(localStorage)에만 저장되고, 다른 유령과 채팅은 예시입니다.
+## 처음 설정 (한 번만)
 
-## 다음 단계
+1. Supabase 프로젝트 만들기 (Region: Seoul)
+2. SQL Editor에 `supabase/schema.sql` 전체를 붙여넣고 Run
+3. Authentication > Emails > Confirm signup 템플릿에 `{{ .Token }}` 넣기 (6자리 인증번호)
+4. `config.js`에 Project URL, publishable key 넣기
+5. Netlify > Project configuration > Environment variables에
+   `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY` 추가 후 재배포
 
-1. Supabase 키를 config.js에 넣기 (로그인·회원가입 활성화)
-2. 유튜브 플레이어 연결 (실제 재생, 곡 길이 자동 계산)
-3. 클럽 정보를 Supabase에 저장
-4. Supabase Realtime: 다른 사용자 위치 · 클럽 채팅 · 거리 말풍선
-5. config.js의 DEV_USERNAME에 개발자 아이디 넣기 (거리 중앙의 큰 클럽 주인)
+## 나중에
 
-## 배포
-
-Netlify에서 이 저장소를 연결하면 됩니다. 빌드 명령 없음, 게시 폴더는 저장소 루트(`.`).
+- 사용자가 늘면 `config.js`의 `SHOW_SAMPLES`를 `false`로
+- 유튜브 재생, 실시간 위치·채팅 (Supabase Realtime)
+- 실제 메일 발송 서비스(SMTP) 연결

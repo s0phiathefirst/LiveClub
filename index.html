@@ -314,6 +314,18 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
     </div>
   </div>
 
+  <!-- music shop -->
+  <div class="modal center" id="shopModal" hidden role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div class="sheet">
+      <header><h2 id="shopTitle">MUSIC SHOP</h2><button class="btn alt" type="button" data-close>닫기</button></header>
+      <div class="pane">
+        <p id="shopLine" style="margin:0;font-size:18px;line-height:1.55;color:#fff"></p>
+        <p class="help" id="shopHelp"></p>
+        <button class="btn gold" type="button" id="shopAct"></button>
+      </div>
+    </div>
+  </div>
+
   <!-- create club -->
   <div class="modal center" id="newModal" hidden role="dialog" aria-modal="true" aria-labelledby="newTitle">
     <form class="sheet" id="newForm" autocomplete="off">
@@ -344,17 +356,19 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
       </div>
 
       <form class="pane" id="loginForm" data-authpane="login" autocomplete="on">
-        <div class="field"><label for="lEmail">이메일</label><input class="inp" id="lEmail" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="lId">아이디</label><input class="inp" id="lId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" required></div>
         <div class="field"><label for="lPw">비밀번호</label><input class="inp" id="lPw" type="password" autocomplete="current-password" required></div>
         <div class="err" id="loginErr"></div>
         <button class="btn gold" type="submit" id="loginBtn">로그인</button>
       </form>
 
       <form class="pane" id="signupForm" data-authpane="signup" hidden autocomplete="on">
-        <div class="field"><label for="sName">아이디</label><input class="inp" id="sName" maxlength="12" autocomplete="username" required>
-          <p class="help">유령 머리 위에 뜨는 이름이에요. 영문, 숫자, 점(.), 밑줄(_)로 2~12자.</p></div>
+        <div class="field"><label for="sId">아이디</label><input class="inp" id="sId" maxlength="16" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+          <p class="help">로그인할 때만 써요. 다른 사람에게는 보이지 않아요. 영문, 숫자, 점(.), 밑줄(_)로 4~16자.</p></div>
+        <div class="field"><label for="sNick">닉네임</label><input class="inp" id="sNick" maxlength="12" autocomplete="nickname" required>
+          <p class="help">유령 머리 위에 뜨는 이름이에요. 한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자.</p></div>
         <div class="field"><label for="sEmail">이메일</label><input class="inp" id="sEmail" type="email" autocomplete="email" required>
-          <p class="help">이 주소로 6자리 인증번호를 보내요.</p></div>
+          <p class="help">인증번호를 받을 주소예요. 다른 사람에게는 보이지 않아요.</p></div>
         <div class="field"><label for="sPw">비밀번호</label><input class="inp" id="sPw" type="password" autocomplete="new-password" minlength="8" required>
           <p class="help">8자 이상</p></div>
         <div class="field"><label for="sPw2">비밀번호 확인</label><input class="inp" id="sPw2" type="password" autocomplete="new-password" required></div>
@@ -366,14 +380,15 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
         <p class="ok" id="codeSent"></p>
         <div class="field"><label for="cCode">인증번호 6자리</label><input class="inp" id="cCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></div>
         <div class="err" id="codeErr"></div>
-        <button class="btn gold" type="submit" id="codeBtn">가입 완료</button>
-        <div class="hrow"><button type="button" class="linkbtn" id="resendBtn">인증번호 다시 보내기</button><button type="button" class="linkbtn" id="backBtn">이메일 다시 입력</button></div>
+        <button class="btn gold" type="submit" id="codeBtn">인증 완료</button>
+        <div class="hrow"><button type="button" class="linkbtn" id="resendBtn">인증번호 다시 보내기</button><button type="button" class="linkbtn" id="backBtn">처음으로</button></div>
       </form>
     </div>
 
     <form class="pane" id="demoForm" hidden autocomplete="off">
-      <p class="notice">아직 서버(Supabase)가 연결되지 않아서 체험 모드로 열려요. 이름만 정하면 둘러볼 수 있고, 꾸민 내용은 이 브라우저에만 저장돼요.</p>
-      <div class="field"><label for="dName">아이디</label><input class="inp" id="dName" maxlength="12" placeholder="예: ghost_01"></div>
+      <p class="notice">아직 서버(Supabase)가 연결되지 않아서 체험 모드로 열려요. 꾸민 내용은 이 브라우저에만 저장돼요.</p>
+      <div class="field"><label for="dId">아이디</label><input class="inp" id="dId" maxlength="16" autocapitalize="off" spellcheck="false" placeholder="예: ghost01"></div>
+      <div class="field"><label for="dNick">닉네임</label><input class="inp" id="dNick" maxlength="12" placeholder="예: 지하유령"></div>
       <div class="err" id="demoErr"></div>
       <button class="btn gold" type="submit">체험으로 들어가기</button>
     </form>
@@ -570,11 +585,16 @@ function upTex(rows,palette,scale){const w=rows[0].length,h=rows.length,c=docume
   const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
 const ghostT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
   const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
+// the developer's ghost wears a tuxedo: bow tie under the mouth, white shirt strip, black jacket with lapels
+const tuxT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
+  if(y===12&&x>=7&&x<=12) return (x===9||x===10)?'#3a3a44':'#0c0c10';
+  if(y>=13){ if(x>=9&&x<=10) return ((y===15||y===17)?'#1a1a20':'#f4f2ec'); if(x===8||x===11) return '#f4f2ec'; if(x===7||x===12) return '#2e2e3a'; return '#15151b'; }
+  const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
 const crownT=upTex(["X...X...X","X..XXX..X","XXXXRXXXX","XXXXXXXXX","XXXXXXXXX","ddddddddd"],(ch)=>ch==='.'?null:ch==='R'?'#ff4458':ch==='d'?'#c9971a':'#ffd23a',4);
 const shadowT=tex(16,8,(g)=>{g.fillStyle='rgba(0,0,0,.55)';g.fillRect(3,1,10,6);g.fillRect(1,2,14,4);});
 const tagsEl=$('tags');
 function makeGhost(scene,name,x,z,opts={}){
-  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:ghostT,transparent:true,alphaTest:.5,fog:true})); s.scale.set(1.0,1.05,1);
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:opts.tux?tuxT:ghostT,transparent:true,alphaTest:.5,fog:true})); s.scale.set(1.0,1.05,1);
   const sh=new THREE.Mesh(new THREE.PlaneGeometry(.9,.45),new THREE.MeshBasicMaterial({map:shadowT,transparent:true,depthWrite:false})); sh.rotation.x=-Math.PI/2;
   const crown=new THREE.Sprite(new THREE.SpriteMaterial({map:crownT,transparent:true,alphaTest:.5})); crown.scale.set(.45,.3,1); crown.visible=!!opts.owner;
   scene.add(s,sh,crown);
@@ -603,32 +623,50 @@ const EX=(a,b,c)=>[{t:'[예시 곡 1]',b:'[아티스트]',u:'',d:a},{t:'[예시 
 const DEFAULT_MINE={id:'mine',name:'CLUB O.de',owner:'developer',intro:'개발자 클럽 · 24시간 운영',dev:true,tags:['밴드','록'],welcome:'어서 오세요, CLUB O.de입니다',feature:0,shuffle:true,
   set:[{t:'Happy Death Day',b:'Xdinary Heroes',u:'',d:197},{t:'Test Me',b:'Xdinary Heroes',u:'',d:192},{t:'Troubleshooting',b:'Xdinary Heroes',u:'',d:200}]};
 const CFG=window.CLUB_CONFIG||{};
-// who is signed in; the developer's account owns the big club in the middle (slot 2), everyone else gets the lot at the end (slot 5)
-let ME_NAME='guest', ME_ID='guest', isDev=false, MY_SLOT=5, myClub=null;
+let ME_NAME='guest', ME_ID='guest', isDev=false, myClub=null;
 const myKey=()=>'cs.club.'+ME_ID;
-function loadMine(){
+function loadMine(){   // demo mode only: the club lives in this browser
   try{const raw=localStorage.getItem(myKey());
     if(raw===null) myClub=isDev?norm(JSON.parse(JSON.stringify(DEFAULT_MINE))):null;
     else {const v=JSON.parse(raw);myClub=v?norm(v):null;}}
-  catch(e){myClub=null;}
-  if(myClub){myClub.owner=ME_NAME;myClub.dev=isDev;}}
-function saveMine(){try{localStorage.setItem(myKey(),JSON.stringify(myClub));}catch(e){toast('저장 공간이 부족해서 이 변경은 저장되지 않았어요');}}
+  catch(e){myClub=null;}}
+let saveT;
+function saveMine(){
+  if(!sb){try{localStorage.setItem(myKey(),JSON.stringify(myClub));}catch(e){toast('저장 공간이 부족해서 이 변경은 저장되지 않았어요');}return;}
+  clearTimeout(saveT); const club=myClub;
+  saveT=setTimeout(async()=>{
+    if(!club){const {error}=await sb.from('clubs').delete().eq('owner',ME_ID); if(error)toast('삭제를 서버에 반영하지 못했어요. 새로고침 후 다시 시도해 주세요'); return;}
+    const data=Object.assign({},club); ['slot','owner','ownerHere','id'].forEach(k=>delete data[k]);
+    const {error}=await sb.from('clubs').upsert({owner:ME_ID,data,updated_at:new Date().toISOString()});
+    if(error) toast('저장하지 못했어요. 잠시 후 다시 시도해 주세요');},700);}
 // what everyone else sees in the middle until the developer account signs in and decorates it
-const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:CFG.DEV_USERNAME||'developer',slot:2,ownerHere:false}));
+const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:'O.de',slot:2,ownerHere:false}));
+let devReal=null, realClubs=[];   // clubs loaded from the server
 const others=[
-  norm({id:'basement',name:'BASEMENT 404',owner:'minjae',slot:0,ownerHere:true,light:'#3a7bff',pattern:'shift',smoke:true,rug:'none',props:{sofa:true,tables:false},
+  norm({id:'basement',name:'BASEMENT 404',owner:'minjae',slot:-1,ownerHere:true,light:'#3a7bff',pattern:'shift',smoke:true,rug:'none',props:{sofa:true,tables:false},
     colors:{guitar:'#d8d2c4',bass:'#1e2a4a',drum:'#2a2a30'},backdrop:'brick',signFont:'bold',neon:'SHOEGAZE ONLY',tags:['포스트록','슈게이즈'],intro:'볼륨 크게, 생각은 작게',welcome:'볼륨 크게 하고 들어오세요',set:EX(214,248,193)}),
-  norm({id:'lowfi',name:'LOWFI ROOM',owner:'lowfi.k',slot:1,ownerHere:false,light:'#8a4dff',floor:'wood',rug:'stripe',props:{sofa:true,tables:true},
+  norm({id:'lowfi',name:'LOWFI ROOM',owner:'lowfi.k',slot:-1,ownerHere:false,light:'#8a4dff',floor:'wood',rug:'stripe',props:{sofa:true,tables:true},
     kit:'synth',colors:{guitar:'#2a2a30',bass:'#8a4dff'},backdrop:'velvet',signFont:'hand',neon:'stay & work',tags:['로파이','작업용'],intro:'작업할 때 틀어두는 방',welcome:'편하게 작업하다 가세요',set:EX(201,177,226)}),
-  norm({id:'garage',name:"JIU'S GARAGE",owner:'jiu_88',slot:3,ownerHere:true,light:'#2fd17a',pattern:'pulse',smoke:true,layout:'corner',
+  norm({id:'garage',name:"JIU'S GARAGE",owner:'jiu_88',slot:-1,ownerHere:true,light:'#2fd17a',pattern:'pulse',smoke:true,layout:'corner',
     colors:{guitar:'#e8e4da',bass:'#111114',drum:'#8a1a1a'},neon:'LOUD',tags:['개러지'],intro:'개러지 록만 틀어요',set:EX(166,189,172)}),
-  norm({id:'bside',name:'B-SIDE HALL',owner:'b-side',slot:4,ownerHere:true,light:'#ffa23a',floor:'checker',rug:'none',props:{ball:true,tables:true},
+  norm({id:'bside',name:'B-SIDE HALL',owner:'b-side',slot:-1,ownerHere:true,light:'#ffa23a',floor:'checker',rug:'none',props:{ball:true,tables:true},
     kit:'acoustic',colors:{guitar:'#c98a4a',drum:'#6a4020'},backdrop:'brick',signFont:'bold',neon:'B-SIDES',tags:['수록곡'],intro:'타이틀곡 말고 수록곡',welcome:'타이틀곡은 다른 데서 들으세요',set:[]})];
+others.forEach(c=>c.sample=true);
 const chats={};
 
 /* ---------- street ---------- */
-// street, left to right: plaza · 2 clubs · developer club (center, larger) · 2 clubs · music shop
-const SLOTS=[{x:-15.8,w:5.2},{x:-9.9,w:5.2},{x:0,w:8.4,dev:true},{x:9.9,w:5.2},{x:15.8,w:5.2},{x:21.7,w:5.2,shop:true}];
+// street, left to right: plaza · 2 clubs · developer club (center, larger) · music shop · 2 clubs
+const SLOTS=[{x:-15.8,w:5.2},{x:-9.9,w:5.2},{x:0,w:8.4,dev:true},{x:9.9,w:5.2,shop:true},{x:15.8,w:5.2},{x:21.7,w:5.2}];
+const CLUB_SLOTS=[0,1,4,5];
+let streetClubs={};
+// center = developer club; the other club lots take my club first, then other people's newest clubs, then samples
+function assignSlots(){
+  streetClubs={2:isDev?myClub:(devReal||devClub)};
+  const list=[]; if(myClub&&!isDev) list.push(myClub);
+  realClubs.forEach(c=>list.push(c)); if(SAMPLES) others.forEach(c=>list.push(c));
+  CLUB_SLOTS.forEach((sl,k)=>{const c=list[k]; if(c){c.slot=sl; streetClubs[sl]=c;}});
+  if(isDev&&myClub) myClub.slot=2;}
+function rebuildStreet(){assignSlots();for(let i=0;i<SLOTS.length;i++)buildSlot(i);}
 const PLAZA_X=-22.4;
 const doors=[], slotGroups=[];
 const sidewalkT=tex(16,16,(g)=>{g.fillStyle='#4a4650';g.fillRect(0,0,16,16);g.fillStyle='#3a3640';g.fillRect(0,7,16,1);g.fillRect(0,15,16,1);g.fillRect(7,0,1,7);g.fillRect(15,8,1,7);g.fillStyle='#55505c';g.fillRect(1,1,5,1);g.fillRect(9,9,5,1);},40,4);
@@ -647,7 +685,7 @@ function neonTex(text,col,font){const c=document.createElement('canvas');c.width
   g.textAlign='center';g.textBaseline='middle';g.shadowColor=col;g.shadowBlur=10;g.fillStyle=col;g.fillText(text,96,21);g.shadowBlur=0;g.fillStyle='#fff';g.globalAlpha=.55;g.fillText(text,96,21);
   const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
 const BCOL=[0x3a2a3a,0x2f3442,0x4a2f2a,0x3d3346,0x2e3a34,0x433a2c];
-function clubAtSlot(i){if(i===MY_SLOT)return myClub;if(i===2&&!isDev)return devClub;return SAMPLES?others.find(c=>c.slot===i)||null:null;}
+function clubAtSlot(i){return streetClubs[i]||null;}
 function buildSlot(i){
   if(slotGroups[i]) streetScene.remove(slotGroups[i]);
   const g=new THREE.Group(); slotGroups[i]=g; streetScene.add(g); const prev=T; T=g;
@@ -667,17 +705,23 @@ function buildSlot(i){
   // marquee bulbs frame the developer club's sign
   const marquee=(col)=>{const m=B(col);for(let k=0;k<=14;k++){const bx=x-2.9+k*5.8/14;box(.09,.09,.06,m,bx,5.22,-5.88);box(.09,.09,.06,m,bx,3.68,-5.88);}
     for(let k=1;k<4;k++){const by=3.68+k*1.54/4;box(.09,.09,.06,m,x-2.9,by,-5.88);box(.09,.09,.06,m,x+2.9,by,-5.88);}};
-  if(def.shop&&MY_SLOT!==i){ sign('MUSIC SHOP','#c9b8a6','악기점 · 준비 중','pixel'); doors[i]=null; }
+  if(def.shop){
+    // music shop: lit display window with guitars, striped awning; you talk to it, you don't go in
+    sign('MUSIC SHOP','#ffd23a','악기점 · 클럽 오픈 상담','pixel');
+    box(w-.9,1.7,.06,B(0x3a2614),x,1.25,-5.93);
+    [[-1.4,0xe3342c],[-.7,0xe8dcc0],[.2,0x111114],[.9,0xd9974e]].forEach(([o,c])=>{box(.28,.42,.05,B(c),x+o,.82,-5.9);box(.06,.62,.05,B(0xe2c991),x+o,1.34,-5.9);});
+    box(w,.1,.9,M(0xb3122a),x,2.55,-5.55); for(let k=0;k<6;k++) box(.38,.11,.92,M(0xf4e9dc),x-w/2+.45+k*.86,2.56,-5.55);
+    plane(2.6,2.2,new THREE.MeshBasicMaterial({color:0xffd23a,transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending}),x,.016,-4.5,-Math.PI/2);
+    doors[i]={x,z:-3.7,shop:true}; }
   else { const club=clubAtSlot(i);
-    if(!club&&i!==MY_SLOT){ sign('COMING SOON','#8a8090','곧 새 클럽이 열려요','pixel'); doors[i]=null; }
-    else if(!club){ sign('빈 공간','#ffd23a','내 클럽 만들기','bold'); stairs('#ffd23a',.18); doors[i]={x:dx,z:-3.7,create:true}; }
+    if(!club){ sign('COMING SOON','#8a8090','곧 새 클럽이 열려요','pixel'); doors[i]=null; }
     else { const sc=club.signColor||club.light;
       sign(club.name,sc,club.dev?'B1 · 24H OPEN':'B1 · LIVE',club.signFont); stairs(club.light,.35);
       if(big) marquee(0xffe3a0);
       if(club.neon) plane(2.6,.55,new THREE.MeshBasicMaterial({map:neonTex(club.neon,sc,club.signFont),transparent:true,depthWrite:false}),big?x-2.6:x-.9,1.7,-5.9);
       doors[i]={x:dx,z:-3.7,club}; } }
   T=prev;}
-let signTimer; function refreshMySign(){clearTimeout(signTimer);signTimer=setTimeout(()=>buildSlot(MY_SLOT),250);}
+let signTimer; function refreshMySign(){clearTimeout(signTimer);signTimer=setTimeout(()=>{if(myClub&&myClub.slot!=null)buildSlot(myClub.slot);},250);}
 function buildStreet(){
   T=streetScene;
   muralT=tex(64,32,(g)=>{g.fillStyle='#2a2440';g.fillRect(0,0,64,32);const c=['#ff3050','#ffd23a','#2fd1e0','#8a4dff','#2fd17a','#ff5fa8'];
@@ -739,7 +783,7 @@ function enterClub(c){
   cur='club'; curClub=c; scene=clubScene;
   clubScene.add(me.s,me.sh,me.crown); me.crown.visible=(c===myClub);
   me.pos.set(0,0,4.6); me.target=null;
-  if(c!==myClub&&c.ownerHere) clubGhosts.push(makeGhost(clubScene,c.owner,-1.5+rnd()*3,.6+rnd()*2,{owner:true}));
+  if(c!==myClub&&c.ownerHere) clubGhosts.push(makeGhost(clubScene,c.owner,-1.5+rnd()*3,.6+rnd()*2,{owner:true,tux:!!c.dev}));
   if(SAMPLES) POOL.slice().sort(()=>rnd()-.5).slice(0,2+(rnd()*2|0)).forEach(n=>clubGhosts.push(makeGhost(clubScene,n,-4.5+rnd()*9,-1+rnd()*4)));
   streetGhosts.forEach(g=>{g.tag.style.display='none';if(g.bubble){g.bubble.remove();g.bubble=null;}});
   applyLook(c); renderPL(); renderChat(); setHud(); snapCam(); showHint();
@@ -831,16 +875,25 @@ function tick(){
 setInterval(tick,1000);
 
 /* ---------- doors ---------- */
-$('enter').addEventListener('click',()=>{if(!nearDoor)return;if(nearDoor.create){openNew();return;}const c=nearDoor.club;go(()=>enterClub(c));});
-$('exitBtn').addEventListener('click',()=>{const slot=curClub===myClub?MY_SLOT:curClub.slot;go(()=>goStreet(doors[slot]));});
+$('enter').addEventListener('click',()=>{if(!nearDoor)return;if(nearDoor.shop){openShop();return;}const c=nearDoor.club;go(()=>enterClub(c));});
+function openShop(){
+  const has=!!myClub;
+  $('shopLine').textContent=has?'어서 와요, '+ME_NAME+' 님. "'+myClub.name+'" 공연은 잘 되고 있죠? 필요한 건 클럽 설정에서 언제든 바꿀 수 있어요.'
+    :'어서 와요. 거리에 비어 있는 지하가 남아 있어요. 클럽 이름이랑 조명 색만 정하면, 오늘 밤부터 '+ME_NAME+' 님의 라이브클럽이에요.';
+  $('shopHelp').textContent=has?'클럽은 한 사람당 하나씩 운영할 수 있어요.':'클럽을 열면 거리에 간판이 걸리고, 다른 사람들이 놀러 올 수 있어요.';
+  $('shopAct').textContent=has?'내 클럽으로 가기':'라이브클럽 오픈하기';
+  openModal($('shopModal'),'#shopAct');}
+$('shopAct').addEventListener('click',()=>{closeModal($('shopModal'));
+  if(myClub){const c=myClub;go(()=>enterClub(c));} else if(!CLUB_SLOTS.some(sl=>!streetClubs[sl]||streetClubs[sl].sample)&&!isDev){toast('지금은 거리에 빈 자리가 없어요. 곧 거리를 넓힐게요');} else openNew();});
+$('exitBtn').addEventListener('click',()=>{const slot=curClub.slot;go(()=>goStreet(doors[slot]||null));});
 
 /* ---------- settings sheet ---------- */
 const setModal=$('setModal'), newModal=$('newModal'); let lastFocus;
 function openModal(m,focusSel){lastFocus=document.activeElement;m.hidden=false;setTimeout(()=>{const f=m.querySelector(focusSel);f&&f.focus();},30);}
 function closeModal(m){m.hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal'))));
-[setModal,newModal].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
-addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal].forEach(m=>{if(!m.hidden)closeModal(m);});});
+[setModal,newModal,$('shopModal')].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
+addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal,$('shopModal')].forEach(m=>{if(!m.hidden)closeModal(m);});});
 function showTab(name){document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));
   document.querySelectorAll('#setModal [data-pane]').forEach(p=>p.hidden=p.dataset.pane!==name);}
 document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
@@ -935,16 +988,16 @@ $('addForm').addEventListener('submit',e=>{e.preventDefault();
   renderTList();renderPL();fillFeature();toast('플레이리스트에 추가했어요');});
 $('fDel').addEventListener('input',()=>{$('delBtn').disabled=$('fDel').value.trim()!==myClub.name;});
 $('delForm').addEventListener('submit',e=>{e.preventDefault();if($('fDel').value.trim()!==myClub.name)return;
-  delete chats[myClub.id]; myClub=null; saveMine(); closeModal(setModal); buildSlot(MY_SLOT);
-  go(()=>{goStreet(doors[MY_SLOT]);toast('클럽을 삭제했어요. 빈 공간에서 새로 만들 수 있어요');});});
+  const slot=myClub.slot; delete chats[myClub.id]; myClub=null; saveMine(); closeModal(setModal); rebuildStreet();
+  go(()=>{goStreet(doors[slot]||null);toast('클럽을 삭제했어요. 악기점에서 언제든 새로 열 수 있어요');});});
 
 /* ---------- create club ---------- */
 let newLight=LIGHTS[0];
 function openNew(){$('nName').value='';$('newErr').textContent='';newLight=LIGHTS[0];swatches($('nLights'),newLight,c=>newLight=c);openModal(newModal,'#nName');}
 $('newForm').addEventListener('submit',e=>{e.preventDefault();const n=$('nName').value.trim();
   if(!n){$('newErr').textContent='클럽 이름을 입력해 주세요.';return;}
-  myClub=norm({id:'mine',name:n,owner:ME_NAME,light:newLight,dev:isDev});saveMine();
-  closeModal(newModal); buildSlot(MY_SLOT); go(()=>{enterClub(myClub);toast('클럽을 만들었어요. 클럽 설정에서 꾸며보세요');});});
+  myClub=norm({id:ME_ID,name:n,owner:ME_NAME,light:newLight,dev:isDev});saveMine();
+  closeModal(newModal); rebuildStreet(); go(()=>{enterClub(myClub);toast('클럽을 만들었어요. 클럽 설정에서 꾸며보세요');});});
 
 /* ---------- loop ---------- */
 function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(Math.max(1,Math.floor(w/PX)),Math.max(1,Math.floor(h/PX)),false);camera.aspect=w/h;camera.updateProjectionMatrix();syncChatToggle();}
@@ -974,7 +1027,7 @@ function step(now){
     if(g.bubble){if(now>g.bubbleUntil){g.bubble.remove();g.bubble=null;}else{g.bubble.style.left=sx+'px';g.bubble.style.top=(sy-26)+'px';}}});
   if(cur==='street'){
     let best=null,bd=1.7; doors.forEach(d=>{if(!d)return;const dd=Math.hypot(d.x-me.pos.x,(d.z-me.pos.z)*.8);if(dd<bd){bd=dd;best=d;}});
-    if(best!==nearDoor){nearDoor=best;const e=$('enter');if(best){e.textContent=best.create?'빈 공간 · 내 클럽 만들기':best.club.name+' 입장하기';e.hidden=false;}else e.hidden=true;}
+    if(best!==nearDoor){nearDoor=best;const e=$('enter');if(best){e.textContent=best.shop?(myClub?'악기점 · 들러보기':'악기점 · 라이브클럽 오픈하기'):best.club.name+' 입장하기';e.hidden=false;}else e.hidden=true;}
   } else if(curClub){
     const p=reduce?'steady':curClub.pattern; tmpCol.copy(baseCol);
     if(p==='shift') tmpCol.offsetHSL(Math.sin(t*.25)*.12,0,0);
@@ -1002,71 +1055,95 @@ Promise.race([fontsReady,new Promise(r=>setTimeout(r,1500))]).then(()=>{
 
 /* ---------- sign in / sign up (Supabase Auth; demo mode until config.js has keys) ---------- */
 const sb=(CFG.SUPABASE_URL&&CFG.SUPABASE_KEY&&window.supabase)?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_KEY):null;
-let authed=false, pendingEmail='';
-const NAME_RE=/^[A-Za-z0-9._]{2,12}$/;
-const userName=u=>(u.user_metadata&&u.user_metadata.username)||u.email.split('@')[0];
+let authed=false;
+let pending=null;   // {mode:'signup', email} or {mode:'login', login}
+const ID_RE=/^[A-Za-z0-9._]{4,16}$/, NICK_RE=/^[가-힣A-Za-z0-9._]{2,12}$/;
+const API='/api/auth';   // Netlify Function: logs in by ID without ever showing anyone's email
 function authTab(t){document.querySelectorAll('[data-auth]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.auth===t)));
   document.querySelectorAll('[data-authpane]').forEach(p=>p.hidden=p.dataset.authpane!==t);}
 document.querySelectorAll('[data-auth]').forEach(b=>b.addEventListener('click',()=>authTab(b.dataset.auth)));
 function busy(btn,on,label){btn.disabled=on;if(label)btn.textContent=label;}
-function signedIn(name,id){
-  authed=true; ME_NAME=name; ME_ID=id; isDev=!!CFG.DEV_USERNAME&&name.toLowerCase()===CFG.DEV_USERNAME.toLowerCase(); MY_SLOT=isDev?2:5;
-  me.name=name; me.tag.textContent=name;
-  loadMine(); for(let i=0;i<SLOTS.length;i++) buildSlot(i);
+async function profileFor(user){
+  const {data}=await sb.from('profiles').select('nickname,is_dev').eq('id',user.id).maybeSingle();
+  return {id:user.id,nick:(data&&data.nickname)||(user.user_metadata&&user.user_metadata.nickname)||'ghost',dev:!!(data&&data.is_dev)};}
+async function loadClubs(){
+  realClubs=[]; devReal=null; myClub=null;
+  const {data:rows,error}=await sb.from('clubs').select('owner,data,updated_at,profiles(nickname,is_dev)').order('updated_at',{ascending:false}).limit(40);
+  if(error){toast('클럽 목록을 불러오지 못했어요. 새로고침해 주세요');return;}
+  (rows||[]).forEach(r=>{const pr=r.profiles||{}; const c=norm(r.data||{}); c.id=r.owner; c.owner=pr.nickname||'?'; c.dev=!!pr.is_dev; c.ownerHere=false;
+    if(r.owner===ME_ID) myClub=c; else if(c.dev) devReal=c; else realClubs.push(c);});
+  if(isDev&&!myClub){myClub=norm(JSON.parse(JSON.stringify(DEFAULT_MINE)));myClub.id=ME_ID;saveMine();}}
+async function signedIn(u){
+  authed=true; ME_ID=u.id; ME_NAME=u.nick; isDev=!!u.dev;
+  me.name=ME_NAME; me.tag.textContent=ME_NAME; me.s.material.map=isDev?tuxT:ghostT; me.s.material.needsUpdate=true;
+  if(sb) await loadClubs(); else loadMine();
+  if(myClub){myClub.owner=ME_NAME;myClub.dev=isDev;myClub.id=ME_ID;}
+  rebuildStreet();
   $('auth').hidden=true; streetHintShown=false; goStreet(null);
-  toast(myClub?name+' 님, 어서 오세요':name+' 님, 어서 오세요. 거리 끝 빈 공간에서 내 클럽을 만들 수 있어요');
-}
+  toast(myClub?ME_NAME+' 님, 어서 오세요':ME_NAME+' 님, 어서 오세요. 개발자 클럽 오른쪽 악기점에서 내 클럽을 열 수 있어요');}
 async function startAuth(){
   if(!sb){ $('authLive').hidden=true; $('demoForm').hidden=false;
-    let saved=null; try{saved=localStorage.getItem('cs.demoName');}catch(e){}
-    if(saved){signedIn(saved,'demo-'+saved);return;}
-    setTimeout(()=>$('dName').focus(),50); return; }
-  try{const {data}=await sb.auth.getSession(); if(data&&data.session){const u=data.session.user;signedIn(userName(u),u.id);return;}}catch(e){}
-  setTimeout(()=>$('lEmail').focus(),50);
-}
-$('demoForm').addEventListener('submit',e=>{e.preventDefault();const n=$('dName').value.trim();
-  if(!NAME_RE.test(n)){$('demoErr').textContent='영문, 숫자, 점(.), 밑줄(_)로 2~12자를 써주세요.';return;}
-  try{localStorage.setItem('cs.demoName',n);}catch(e){} signedIn(n,'demo-'+n);});
+    let saved=null; try{saved=JSON.parse(localStorage.getItem('cs.demo')||'null');}catch(e){}
+    if(saved&&saved.id){signedIn(saved);return;}
+    setTimeout(()=>$('dId').focus(),50); return; }
+  try{const {data}=await sb.auth.getSession(); if(data&&data.session){signedIn(await profileFor(data.session.user));return;}}catch(e){}
+  setTimeout(()=>$('lId').focus(),50);}
+$('demoForm').addEventListener('submit',e=>{e.preventDefault();const id=$('dId').value.trim(), nick=$('dNick').value.trim(), err=$('demoErr');
+  if(!ID_RE.test(id)){err.textContent='아이디는 영문, 숫자, 점(.), 밑줄(_)로 4~16자예요.';return;}
+  if(!NICK_RE.test(nick)){err.textContent='닉네임은 한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자예요.';return;}
+  const u={id:'demo-'+id.toLowerCase(),nick,dev:!!CFG.DEV_USERNAME&&id.toLowerCase()===CFG.DEV_USERNAME.toLowerCase()};
+  try{localStorage.setItem('cs.demo',JSON.stringify(u));}catch(e){} signedIn(u);});
+async function callApi(body){
+  try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const j=await r.json().catch(()=>({})); return {ok:r.ok,...j};}
+  catch(e){return {ok:false,error:'network'};}}
+async function useSession(j){const {data,error}=await sb.auth.setSession({access_token:j.access_token,refresh_token:j.refresh_token});
+  if(error) return false; signedIn(await profileFor(data.user)); return true;}
 $('loginForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('loginErr'),btn=$('loginBtn');err.textContent='';
-  busy(btn,true,'확인 중…');
-  const {data,error}=await sb.auth.signInWithPassword({email:$('lEmail').value.trim(),password:$('lPw').value});
-  busy(btn,false,'로그인');
-  if(error){const m=error.message||'';
-    err.textContent=/invalid login/i.test(m)?'이메일 또는 비밀번호가 맞지 않아요.'
-      :/not confirmed/i.test(m)?'아직 이메일 인증이 끝나지 않았어요. 회원가입에서 인증번호를 입력해 주세요.'
-      :'로그인하지 못했어요. ('+m+')';return;}
-  signedIn(userName(data.user),data.user.id);});
+  const login=$('lId').value.trim(), password=$('lPw').value;
+  busy(btn,true,'확인 중…'); const j=await callApi({action:'login',login,password}); busy(btn,false,'로그인');
+  if(j.ok&&await useSession(j)) return;
+  if(j.error==='unconfirmed'){pending={mode:'login',login};$('codeSent').textContent='이메일 인증이 아직 안 끝났어요. '+(j.email||'가입한 이메일')+'로 인증번호를 다시 보냈어요.';authTab('code');return;}
+  err.textContent=j.error==='invalid'?'아이디 또는 비밀번호가 맞지 않아요.':j.error==='rate'?'시도가 너무 많아요. 잠시 후 다시 해주세요.':'로그인하지 못했어요. 잠시 후 다시 시도해 주세요.';});
 $('signupForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('signupErr'),btn=$('signupBtn');err.textContent='';
-  const name=$('sName').value.trim(), email=$('sEmail').value.trim(), pw=$('sPw').value;
-  if(!NAME_RE.test(name)){err.textContent='아이디는 영문, 숫자, 점(.), 밑줄(_)로 2~12자예요.';return;}
+  const login=$('sId').value.trim(), nick=$('sNick').value.trim(), email=$('sEmail').value.trim(), pw=$('sPw').value;
+  if(!ID_RE.test(login)){err.textContent='아이디는 영문, 숫자, 점(.), 밑줄(_)로 4~16자예요.';return;}
+  if(!NICK_RE.test(nick)){err.textContent='닉네임은 한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자예요.';return;}
   if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 해요.';return;}
   if(pw!==$('sPw2').value){err.textContent='비밀번호 확인이 일치하지 않아요.';return;}
+  busy(btn,true,'확인 중…');
+  const {data:av,error:avErr}=await sb.rpc('check_available',{p_login:login,p_nick:nick});
+  if(avErr){busy(btn,false,'인증번호 보내기');err.textContent='서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
+  if(!av.login||!av.nick){busy(btn,false,'인증번호 보내기');err.textContent=!av.login?'이미 쓰고 있는 아이디예요.':'이미 쓰고 있는 닉네임이에요.';return;}
   busy(btn,true,'보내는 중…');
-  const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{username:name}}});
+  const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{login_id:login,nickname:nick}}});
   busy(btn,false,'인증번호 보내기');
   if(error){const m=error.message||'';
     err.textContent=/already/i.test(m)?'이미 가입된 이메일이에요. 로그인해 주세요.'
       :/rate limit/i.test(m)?'인증 메일을 너무 자주 보냈어요. 잠시 후 다시 시도해 주세요.'
+      :/database error/i.test(m)?'아이디나 닉네임을 방금 다른 사람이 가져갔어요. 다른 걸로 해주세요.'
       :'가입하지 못했어요. ('+m+')';return;}
-  if(data.session){signedIn(name,data.user.id);return;}   // email confirmation turned off
-  pendingEmail=email; $('codeSent').textContent=email+'로 인증번호를 보냈어요. 메일함과 스팸함을 확인해 주세요.';
+  if(data.session){signedIn(await profileFor(data.user));return;}
+  pending={mode:'signup',email}; $('codeSent').textContent=email+'로 인증번호를 보냈어요. 메일함과 스팸함을 확인해 주세요.';
   authTab('code'); setTimeout(()=>$('cCode').focus(),50);});
 $('codeForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('codeErr'),btn=$('codeBtn');err.textContent='';
   const token=$('cCode').value.trim(); if(!/^\d{6}$/.test(token)){err.textContent='숫자 6자리를 입력해 주세요.';return;}
-  busy(btn,true,'확인 중…');
-  const {data,error}=await sb.auth.verifyOtp({email:pendingEmail,token,type:'signup'});
-  busy(btn,false,'가입 완료');
-  if(error){err.textContent='인증번호가 맞지 않거나 시간이 지났어요. 다시 보내기를 눌러 주세요.';return;}
-  signedIn(userName(data.user),data.user.id);});
-$('resendBtn').addEventListener('click',async()=>{if(!pendingEmail)return;
-  const {error}=await sb.auth.resend({type:'signup',email:pendingEmail});
-  $('codeErr').textContent=error?'다시 보내지 못했어요. 잠시 후 시도해 주세요.':''; if(!error)toast('인증번호를 다시 보냈어요');});
-$('backBtn').addEventListener('click',()=>authTab('signup'));
+  if(!pending)return; busy(btn,true,'확인 중…');
+  let ok=false;
+  if(pending.mode==='signup'){const {data,error}=await sb.auth.verifyOtp({email:pending.email,token,type:'signup'}); if(!error){signedIn(await profileFor(data.user));ok=true;}}
+  else {const j=await callApi({action:'verify',login:pending.login,token}); if(j.ok) ok=await useSession(j);}
+  busy(btn,false,'인증 완료');
+  if(!ok) err.textContent='인증번호가 맞지 않거나 시간이 지났어요. 다시 보내기를 눌러 주세요.';});
+$('resendBtn').addEventListener('click',async()=>{if(!pending)return; let failed;
+  if(pending.mode==='signup'){const {error}=await sb.auth.resend({type:'signup',email:pending.email});failed=!!error;}
+  else {const j=await callApi({action:'resend',login:pending.login});failed=!j.ok;}
+  $('codeErr').textContent=failed?'다시 보내지 못했어요. 잠시 후 시도해 주세요.':''; if(!failed)toast('인증번호를 다시 보냈어요');});
+$('backBtn').addEventListener('click',()=>{pending=null;authTab('login');});
 let rotateT;
 function rotateHint(){if(!isTouch||innerWidth>innerHeight)return;const r=$('rotate');r.classList.remove('gone');clearTimeout(rotateT);rotateT=setTimeout(()=>r.classList.add('gone'),4500);}
 rotateHint(); addEventListener('orientationchange',()=>setTimeout(rotateHint,300));
 $('logoutBtn').addEventListener('click',async()=>{
-  if(sb){try{await sb.auth.signOut();}catch(e){}} else {try{localStorage.removeItem('cs.demoName');}catch(e){}}
+  if(sb){try{await sb.auth.signOut();}catch(e){}} else {try{localStorage.removeItem('cs.demo');}catch(e){}}
   location.reload();});
 })();
 </script>

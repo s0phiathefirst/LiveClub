@@ -4,6 +4,6 @@
 window.CLUB_CONFIG = {
   SUPABASE_URL: '',          // e.g. https://abcdxyz.supabase.co
   SUPABASE_KEY: '',          // Project Settings > API Keys > publishable (anon) key
-  DEV_USERNAME: 'JoReng2',   // the developer's ID (case-insensitive): owns the big club in the middle of the street
+  DEV_USERNAME: 'JoReng2',   // demo mode only: this ID gets the developer club. With Supabase, schema.sql decides it
   SHOW_SAMPLES: true         // sample clubs and ghosts while the street is empty; set to false once real users arrive
 };

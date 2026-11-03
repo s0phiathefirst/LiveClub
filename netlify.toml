@@ -1,10 +1,18 @@
-# Static site: no build step, publish the repository root.
+# Static site (no build step) + one serverless function for ID login.
 [build]
   publish = "."
   command = ""
+
+[functions]
+  directory = "netlify/functions"
 
 [[headers]]
   for = "/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
+
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "no-cache"
