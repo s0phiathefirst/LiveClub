@@ -397,12 +397,12 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
         <div class="field"><label for="sNick">닉네임</label><input class="inp" id="sNick" maxlength="12" autocomplete="nickname" required>
           <p class="help">유령 머리 위에 뜨는 이름이에요. 한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자.</p></div>
         <div class="field"><label for="sEmail">이메일</label><input class="inp" id="sEmail" type="email" autocomplete="email" required>
-          <p class="help">인증번호를 받을 주소예요. 다른 사람에게는 보이지 않아요.</p></div>
+          <p class="help">비밀번호를 잊었을 때 쓸 주소예요. 다른 사람에게는 보이지 않아요.</p></div>
         <div class="field"><label for="sPw">비밀번호</label><input class="inp" id="sPw" type="password" autocomplete="new-password" minlength="8" required>
           <p class="help">8자 이상</p></div>
         <div class="field"><label for="sPw2">비밀번호 확인</label><input class="inp" id="sPw2" type="password" autocomplete="new-password" required></div>
         <div class="err" id="signupErr"></div>
-        <button class="btn gold" type="submit" id="signupBtn">인증번호 보내기</button>
+        <button class="btn gold" type="submit" id="signupBtn">가입하기</button>
       </form>
 
       <form class="pane" id="codeForm" data-authpane="code" hidden autocomplete="off">
@@ -1233,11 +1233,11 @@ $('signupForm').addEventListener('submit',async e=>{e.preventDefault();const err
   if(pw!==$('sPw2').value){err.textContent='비밀번호 확인이 일치하지 않아요.';return;}
   busy(btn,true,'확인 중…');
   const {data:av,error:avErr}=await sb.rpc('check_available',{p_login:login,p_nick:nick});
-  if(avErr){busy(btn,false,'인증번호 보내기');err.textContent='서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
-  if(!av.login||!av.nick){busy(btn,false,'인증번호 보내기');err.textContent=!av.login?'이미 쓰고 있는 아이디예요.':'이미 쓰고 있는 닉네임이에요.';return;}
-  busy(btn,true,'보내는 중…');
+  if(avErr){busy(btn,false,'가입하기');err.textContent='서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
+  if(!av.login||!av.nick){busy(btn,false,'가입하기');err.textContent=!av.login?'이미 쓰고 있는 아이디예요.':'이미 쓰고 있는 닉네임이에요.';return;}
+  busy(btn,true,'가입 중…');
   const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{login_id:login,nickname:nick}}});
-  busy(btn,false,'인증번호 보내기');
+  busy(btn,false,'가입하기');
   if(error){const m=error.message||'';
     err.textContent=/already/i.test(m)?'이미 가입된 이메일이에요. 로그인해 주세요.'
       :/rate limit/i.test(m)?'인증 메일을 너무 자주 보냈어요. 잠시 후 다시 시도해 주세요.'
