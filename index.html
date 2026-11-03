@@ -59,6 +59,8 @@ body{background:var(--ink);color:var(--paper);font-family:var(--body);overflow:h
 #signTags{display:flex;flex-wrap:wrap;gap:4px}
 .chip{font-family:var(--body);font-size:12px;padding:1px 6px;border:2px solid var(--led);color:var(--led-soft)}
 #signFeat{font-size:13px;color:var(--muted)}
+#online{display:flex;align-items:center;gap:6px;font-size:13px;color:#d8c6b0}
+#online i{width:8px;height:8px;background:#3fdc8a;display:inline-block;box-shadow:0 0 6px #3fdc8a}
 #np{width:280px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
 #np .title{font-size:19px;color:#fff;line-height:1.2}
 #np .band{font-size:14px;color:var(--muted);margin-top:-4px}
@@ -201,6 +203,7 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
     <div class="sub" id="signSub"></div>
     <div id="signTags"></div>
     <div id="signFeat"></div>
+    <div id="online" hidden><i aria-hidden="true"></i><span id="onlineText"></span></div>
   </div>
 
   <div class="hud R Tp" id="np" aria-live="polite">
@@ -232,7 +235,7 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
 
   <section class="hud R Bt" id="chat" aria-label="클럽 채팅">
     <header>
-      <span class="label">CLUB CHAT · 예시 대화</span>
+      <span class="label">CLUB CHAT · 실시간</span>
       <button class="ghostbtn" id="chatClose" type="button">접기</button>
     </header>
     <div id="log" aria-live="polite"></div>
@@ -875,6 +878,48 @@ function streetLook(){const root=document.documentElement.style;root.setProperty
   $('signLabel').textContent='STREET'; $('signName').textContent='HONGDAE'; $('signSub').textContent='클럽 계단 앞으로 가면 들어갈 수 있어요'; $('signTags').innerHTML=''; $('signFeat').textContent='';}
 
 /* ---------- scene switching ---------- */
+/* ---------- realtime: see each other, chat, count who's online (Supabase Realtime) ----------
+   one channel per place (street, club:<id>) + one site-wide lobby for the online count.
+   Positions go out only while you move (max ~6/s) and once when you stop, to keep message use low. */
+let room=null, roomName='', lobby=null, remote={}, lastSent={x:1e9,z:1e9,t:0}, moving=false;
+function myMeta(){return {nick:ME_NAME,dev:isDev,x:+me.pos.x.toFixed(2),z:+me.pos.z.toFixed(2)};}
+function rtSend(event,payload){ if(room&&room.state==='joined') room.send({type:'broadcast',event,payload:Object.assign({id:ME_ID},payload)}); }
+function rtRetrack(){ if(room&&room.state==='joined') room.track(myMeta()); if(lobby&&lobby.state==='joined') lobby.track({nick:ME_NAME}); }
+function dropRemote(){ Object.values(remote).forEach(dropGhost); remote={}; }
+function updateOnline(){
+  if(!sb||!authed){$('online').hidden=true;return;}
+  const total=lobby?Object.keys(lobby.presenceState()).length:1, here=room?Object.keys(room.presenceState()).length:1;
+  $('online').hidden=false; $('onlineText').textContent='접속 중 '+Math.max(1,total)+'명 · 여기 '+Math.max(1,here)+'명';}
+function syncRoom(){
+  const st=room.presenceState(), seen={};
+  Object.keys(st).forEach(id=>{ if(id===ME_ID)return; const m=st[id][0]||{}; seen[id]=1;
+    let g=remote[id];
+    if(!g){ g=makeGhost(scene,m.nick||'?',m.x||0,m.z||2,{tux:!!m.dev,owner:cur==='club'&&curClub&&curClub.id===id}); g.target=new THREE.Vector3(m.x||0,0,m.z||2); remote[id]=g; }
+    else { if(m.nick&&g.tag.textContent!==m.nick) g.tag.textContent=m.nick; if(typeof m.x==='number') g.target=new THREE.Vector3(m.x,0,m.z); } });
+  Object.keys(remote).forEach(id=>{ if(!seen[id]){dropGhost(remote[id]);delete remote[id];} });
+  updateOnline();}
+function joinRoom(name){
+  if(!sb||!authed) return;
+  if(room){ sb.removeChannel(room); room=null; } dropRemote(); roomName=name;
+  const ch=sb.channel('lc:'+name,{config:{presence:{key:ME_ID},broadcast:{self:false}}}); room=ch;
+  ch.on('presence',{event:'sync'},()=>{if(room===ch)syncRoom();})
+    .on('broadcast',{event:'pos'},({payload:p})=>{const g=remote[p.id]; if(room===ch&&g) g.target=new THREE.Vector3(p.x,0,p.z);})
+    .on('broadcast',{event:'chat'},({payload:p})=>{ if(room!==ch||cur!=='club'||!curClub)return; const g=remote[p.id]; const who=g?g.tag.textContent:'?';
+        const m={who,text:String(p.text||'').slice(0,120)}; (chats[curClub.id]=chats[curClub.id]||[]).push(m); drawMsg(m); if(g) say(g,m.text); })
+    .on('broadcast',{event:'say'},({payload:p})=>{const g=remote[p.id]; if(room===ch&&g) say(g,String(p.text||'').slice(0,40));})
+    .subscribe(status=>{ if(status==='SUBSCRIBED'&&room===ch){ ch.track(myMeta()); updateOnline(); } });}
+function joinLobby(){
+  if(!sb||lobby) return;
+  lobby=sb.channel('lc:lobby',{config:{presence:{key:ME_ID}}});
+  lobby.on('presence',{event:'sync'},updateOnline).subscribe(st=>{ if(st==='SUBSCRIBED'){ lobby.track({nick:ME_NAME}); updateOnline(); } });}
+function rtTick(now){
+  if(!room||room.state!=='joined') return;
+  const d=Math.hypot(me.pos.x-lastSent.x,me.pos.z-lastSent.z);
+  if(d>.05&&now-lastSent.t>160){ moving=true; lastSent={x:me.pos.x,z:me.pos.z,t:now}; rtSend('pos',{x:+me.pos.x.toFixed(2),z:+me.pos.z.toFixed(2)}); }
+  else if(moving&&d<=.05&&now-lastSent.t>600){ moving=false; room.track(myMeta()); }   // settled: newcomers will see you here
+}
+addEventListener('pagehide',()=>{ try{ if(room)sb.removeChannel(room); if(lobby)sb.removeChannel(lobby);}catch(e){} });
+
 /* ---------- guestbook: one per club, newest first ---------- */
 const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||''));
 const kstStamp=iso=>{const d=new Date(new Date(iso).getTime()+9*3600e3).toISOString();return d.slice(0,10).replace(/-/g,'.')+' '+d.slice(11,16);};
@@ -918,6 +963,7 @@ function enterClub(c){
   streetGhosts.forEach(g=>{g.tag.style.display='none';if(g.bubble){g.bubble.remove();g.bubble=null;}});
   applyLook(c); renderPL(); renderChat(); setHud(); snapCam(); showHint();
   if(c.welcome) toast(c.welcome);
+  joinRoom('club:'+c.id);
 }
 function goStreet(near){
   stopPlayback(); $('ytMsg').textContent='';
@@ -925,6 +971,7 @@ function goStreet(near){
   cur='street'; scene=streetScene; streetScene.add(me.s,me.sh,me.crown); me.crown.visible=false;
   if(near) me.pos.set(near.x,0,near.z+1.3); else me.pos.set(0,0,1);
   me.target=null; curClub=null; streetLook(); setHud(); snapCam(); showHint();
+  joinRoom('street');
 }
 let nearDoor=null;
 function setHud(){
@@ -971,8 +1018,8 @@ function drawMsg(m){const d=document.createElement('div');
   log.appendChild(d);log.scrollTop=log.scrollHeight;}
 function say(gh,text){if(gh.bubble)gh.bubble.remove();const b=document.createElement('div');b.className='bubble';b.textContent=text;tagsEl.appendChild(b);gh.bubble=b;gh.bubbleUntil=performance.now()+4500;}
 $('chatForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('chatInput');const t=inp.value.trim();if(!t||!curClub)return;
-  const m={who:ME_NAME,text:t,me:true};chats[curClub.id].push(m);drawMsg(m);say(me,t);inp.value='';});
-$('sayForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('sayInput');const t=inp.value.trim();if(!t)return;say(me,t);inp.value='';});
+  const m={who:ME_NAME,text:t,me:true};chats[curClub.id].push(m);drawMsg(m);say(me,t);inp.value='';rtSend('chat',{text:t});});
+$('sayForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('sayInput');const t=inp.value.trim();if(!t)return;say(me,t);inp.value='';rtSend('say',{text:t});});
 const chat=$('chat');
 function syncChatToggle(){$('chatToggle').hidden=!(cur==='club'&&innerWidth<=720&&chat.classList.contains('closed'));}
 $('chatClose').addEventListener('click',()=>{
@@ -1071,7 +1118,7 @@ function openBoutique(){
   $('nickHelp').textContent=isDev?'개발자 계정은 언제든 바꿀 수 있어요.':blocked?'오늘은 이미 바꿨어요. 내일 다시 바꿀 수 있어요.':'한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자. 닉네임은 하루에 한 번 바꿀 수 있어요.';
   $('nickBtn').disabled=blocked; openModal($('boutModal'),'#nickNew');}
 function applyNick(n){
-  ME_NAME=n; me.name=n; me.tag.textContent=n; if(myClub){myClub.owner=n;}
+  ME_NAME=n; me.name=n; me.tag.textContent=n; if(myClub){myClub.owner=n;} rtRetrack();
   if(!sb){try{const d=JSON.parse(localStorage.getItem('cs.demo')||'null');if(d){d.nick=n;localStorage.setItem('cs.demo',JSON.stringify(d));}}catch(e){}}}
 $('nickForm').addEventListener('submit',async e=>{e.preventDefault();const n=$('nickNew').value.trim(),err=$('nickErr'),btn=$('nickBtn');err.textContent='';
   if(n===ME_NAME){err.textContent='지금 쓰고 있는 닉네임이에요.';return;}
@@ -1239,8 +1286,12 @@ function step(now){
   list.forEach(g=>{g.next-=dt;
     if(g.next<=0){g.next=3+rnd()*6;const zl=cur==='street'?-4.1:b.z0; g.target=rnd()<.6?new THREE.Vector3(b.x0+1+rnd()*(b.x1-b.x0-2),0,zl+.5+rnd()*(b.z1-zl-1)):null;}
     if(g.target){tmp.subVectors(g.target,g.pos);const d=tmp.length();if(d<.1)g.target=null;else{g.pos.addScaledVector(tmp,Math.min(d,1.3*dt)/d);if(Math.abs(tmp.x)>.1)g.s.scale.x=tmp.x<0?-1:1;}}});
+  const rems=Object.values(remote);
+  rems.forEach(g=>{ if(!g.target)return; tmp.subVectors(g.target,g.pos); tmp.y=0; const d=tmp.length();
+    if(d>8) g.pos.copy(g.target); else if(d>.05){g.pos.addScaledVector(tmp,Math.min(d,3.6*dt)/d); if(Math.abs(tmp.x)>.1)g.s.scale.x=tmp.x<0?-1:1;} });
+  rtTick(now);
   const W=innerWidth,H=innerHeight;
-  list.concat([me]).forEach(g=>{
+  list.concat(rems,[me]).forEach(g=>{
     const bob=reduce?0:Math.sin(t*1.3+g.phase)*.04;
     g.s.position.set(g.pos.x,.72+bob,g.pos.z); g.sh.position.set(g.pos.x,.02,g.pos.z); g.crown.position.set(g.pos.x,1.42+bob,g.pos.z);
     tmp.set(g.pos.x,(g.crown.visible?1.68:1.4)+bob,g.pos.z).project(camera);
@@ -1305,7 +1356,7 @@ async function signedIn(u){
   if(sb) await loadClubs(); else loadMine();
   if(myClub){myClub.owner=ME_NAME;myClub.dev=isDev;myClub.id=ME_ID;}
   rebuildStreet();
-  $('auth').hidden=true; streetHintShown=false; goStreet(null);
+  $('auth').hidden=true; streetHintShown=false; joinLobby(); goStreet(null);
   toast(myClub?ME_NAME+' 님, 어서 오세요':ME_NAME+' 님, 어서 오세요. 개발자 클럽 오른쪽 악기점에서 내 클럽을 열 수 있어요');}
 async function startAuth(){
   if(!sb){ $('authLive').hidden=true; $('demoForm').hidden=false;
