@@ -1,0 +1,1075 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LIVE CLUB</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Silkscreen&family=Do+Hyeon&family=Black+Han+Sans&family=Dokdo&display=swap">
+<style>
+/* Layout: full-screen pixel-rendered 3D (club or street), HUD pinned to corners, settings as a side sheet so changes preview live */
+:root{
+  --ink:#12080c; --panel:#0a0508; --paper:#f4e9dc; --muted:#a8968a; --line:#2a1a20; --field:#1a0e13;
+  --led:#ff3050; --led-soft:#ff8a96; --led-ink:#ffffff; --gold:#ffd23a; --danger:#b3122a;
+  --pixel:'Silkscreen',ui-monospace,monospace; --body:'Do Hyeon',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;margin:0}
+/* sign-in / sign-up screen over the street */
+#auth{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(7,4,10,.55);backdrop-filter:blur(2px)}
+#auth .sheet{width:min(420px,100%)}
+.brand{padding:22px 20px 14px;border-bottom:3px solid var(--line);display:flex;flex-direction:column;gap:6px}
+.brand .logo{font-family:var(--pixel);font-size:28px;color:#fff;line-height:1}
+.brand .logo b{color:var(--gold);font-weight:400}
+.brand p{margin:0;font-size:15px;color:var(--muted)}
+.tabs2{display:grid;grid-template-columns:1fr 1fr;border-bottom:3px solid var(--line)}
+.tabs2 button{min-height:48px;background:transparent;border:0;color:var(--muted);font-size:17px}
+.tabs2 button[aria-selected="true"]{color:#fff;background:var(--field);box-shadow:inset 0 -3px 0 var(--gold)}
+.linkbtn{background:none;border:0;padding:0;color:var(--gold);font-size:14px;text-decoration:underline;cursor:pointer;font-family:var(--body)}
+.notice{padding:10px 12px;background:#1f1508;border:2px solid #5a4210;color:#f4d98a;font-size:14px;line-height:1.45}
+.ok{font-size:14px;color:#7ad9a0}
+body{background:var(--ink);color:var(--paper);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none}
+#app{position:fixed;inset:0}
+#view{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:pointer;display:block}
+#tags{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.tag{position:absolute;transform:translate(-50%,-100%);font-family:var(--pixel);font-size:11px;line-height:1;padding:3px 6px;background:rgba(10,5,8,.82);color:var(--paper);border:2px solid #000;white-space:nowrap}
+.tag.me{background:var(--gold);color:var(--ink)}
+.bubble{position:absolute;transform:translate(-50%,-100%);max-width:200px;font-size:15px;line-height:1.3;padding:6px 10px;background:var(--paper);color:var(--ink);border:3px solid #000;box-shadow:3px 3px 0 #000;text-align:center}
+.hud{position:absolute;background:var(--panel);border:4px solid var(--paper);box-shadow:6px 6px 0 #000;box-sizing:border-box}
+.label{font-family:var(--pixel);font-size:11px;letter-spacing:2px;color:var(--led-soft)}
+.L{left:max(16px,calc(env(safe-area-inset-left,0px) + 12px))}
+.R{right:max(16px,calc(env(safe-area-inset-right,0px) + 12px))}
+.Tp{top:calc(env(safe-area-inset-top,0px) + 14px)}
+.Bt{bottom:calc(env(safe-area-inset-bottom,0px) + 14px)}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+#sign{border-color:var(--led);padding:10px 14px;display:flex;flex-direction:column;gap:4px;max-width:min(340px,calc(100% - 320px))}
+#sign .name{font-family:var(--pixel);font-size:24px;line-height:1.05;color:#fff;overflow-wrap:anywhere}
+#sign .sub{font-size:15px;color:#d8c6b0}
+#signTags{display:flex;flex-wrap:wrap;gap:4px}
+.chip{font-family:var(--body);font-size:12px;padding:1px 6px;border:2px solid var(--led);color:var(--led-soft)}
+#signFeat{font-size:13px;color:var(--muted)}
+#np{width:280px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+#np .title{font-size:19px;color:#fff;line-height:1.2}
+#np .band{font-size:14px;color:var(--muted);margin-top:-4px}
+.bar{position:relative;height:10px;background:repeating-linear-gradient(90deg,#3a1a22 0 10px,transparent 10px 13px)}
+.bar i{position:absolute;inset:0 auto 0 0;background:repeating-linear-gradient(90deg,var(--led) 0 10px,transparent 10px 13px)}
+.times{display:flex;justify-content:space-between;font-family:var(--pixel);font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+#pl{bottom:calc(env(safe-area-inset-bottom,0px) + 80px);width:260px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+#plRows{display:flex;flex-direction:column;gap:4px;max-height:150px;overflow-y:auto}
+.row{display:flex;gap:10px;align-items:baseline;font-size:16px;color:var(--muted)}
+.row .n{font-family:var(--pixel);font-size:10px;width:18px;flex-shrink:0}
+.row .s{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row.on{color:var(--ink);background:var(--gold);margin:0 -8px;padding:2px 8px}
+#hint{left:50%;top:calc(env(safe-area-inset-top,0px) + 120px);transform:translateX(-50%);padding:10px 16px;font-size:17px;border-color:var(--gold);color:#fff;text-align:center;transition:opacity .6s;max-width:calc(100% - 32px)}
+#hint b{color:var(--gold);font-weight:400}
+#hint.gone{opacity:0;pointer-events:none}
+#chat{width:300px;display:flex;flex-direction:column}
+#chat header{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:3px solid var(--line)}
+#log{height:170px;overflow-y:auto;padding:8px 12px;display:flex;flex-direction:column;gap:6px;-webkit-user-select:text;user-select:text}
+.msg{font-size:15px;line-height:1.35;overflow-wrap:anywhere}
+.msg .who{font-family:var(--pixel);font-size:11px;color:var(--led-soft);margin-right:6px}
+.msg .who.me{color:var(--gold)}
+.msg.sys{color:var(--muted);font-size:13px}
+.lineform{display:flex;gap:6px;padding:8px}
+#chatForm{border-top:3px solid var(--line)}
+.inp{min-width:0;min-height:40px;padding:0 10px;background:var(--field);color:#fff;border:2px solid #4a2a34;font-family:var(--body);font-size:16px;box-sizing:border-box;-webkit-user-select:text;user-select:text}
+.inp:focus{outline:none;border-color:var(--gold)}
+.lineform .inp{flex:1}
+select.inp{padding:0 6px}
+button,label.btn{font-family:var(--body);cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,label.btn:focus-within{outline:3px solid var(--gold);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;background:var(--led);color:var(--led-ink);border:3px solid #000;box-shadow:3px 3px 0 #000;font-size:16px;box-sizing:border-box}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 #000}
+.btn.alt{background:var(--paper);color:var(--ink)}
+.btn.gold{background:var(--gold);color:var(--ink)}
+.btn.danger{background:var(--danger);color:#fff}
+.req{color:var(--gold);font-size:13px;margin-left:4px}
+.opt{color:var(--muted);font-size:13px;margin-left:4px}
+.slots3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.pslot{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.pslot .thumb{aspect-ratio:3/4;max-width:100%;background:var(--field) center/cover no-repeat;border:2px dashed #4a2a34;image-rendering:pixelated;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.pslot .thumb.has{border-style:solid;border-color:var(--paper);color:transparent}
+.pslot .btn{min-height:36px;font-size:14px;padding:0 6px}
+.bthumb{aspect-ratio:14/9;max-width:220px;background:var(--field) center/cover no-repeat;border:2px dashed #4a2a34;image-rendering:pixelated;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.bthumb.has{border-style:solid;border-color:var(--paper);color:transparent}
+.btn[disabled]{opacity:.4;cursor:not-allowed;transform:none}
+.ghostbtn{background:transparent;border:0;color:var(--muted);font-family:var(--pixel);font-size:11px;min-height:32px;padding:0 4px}
+#bottomL{position:absolute;display:flex;gap:10px;flex-wrap:wrap}
+#bottomL .btn{min-height:48px;font-size:17px}
+#enter{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 90px);transform:translateX(-50%);min-height:54px;padding:0 22px;font-size:19px;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
+#enter:active{transform:translate(calc(-50% + 2px),2px)}
+#sayBox{width:320px}
+#sayBox .help{padding:8px 12px 0}
+#toast{position:absolute;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 160px);transform:translateX(-50%);padding:8px 14px;background:var(--paper);color:var(--ink);border:3px solid #000;font-size:15px;transition:opacity .4s;pointer-events:none;max-width:calc(100% - 32px);text-align:center;z-index:30}
+#rotate{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 16px);transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper);color:var(--ink);border:3px solid #000;box-shadow:4px 4px 0 #000;font-size:15px;transition:opacity .5s;max-width:calc(100% - 32px)}
+#rotate.gone{opacity:0;pointer-events:none}
+#rotate svg{flex-shrink:0}
+#fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .25s;z-index:40}
+#chatToggle{display:none}
+/* settings: side sheet with a light scrim so the club stays visible while editing */
+.modal{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.25);display:flex;align-items:stretch;justify-content:flex-end;padding:16px;box-sizing:border-box}
+.modal.center{background:rgba(0,0,0,.62);align-items:center;justify-content:center}
+.sheet{width:min(440px,100%);max-height:100%;overflow:auto;background:var(--panel);border:4px solid var(--paper);box-shadow:8px 8px 0 #000;display:flex;flex-direction:column;-webkit-user-select:text;user-select:text}
+.sheet header{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 16px;border-bottom:3px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:1}
+.sheet h2{margin:0;font-family:var(--pixel);font-size:15px;font-weight:400;letter-spacing:1px;color:#fff}
+.sheet header .help{display:block;margin-top:2px}
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-bottom:3px solid var(--line)}
+.tabs button{min-height:46px;padding:0 8px;background:transparent;border:0;color:var(--muted);font-size:16px}
+.tabs button[aria-selected="true"]{color:#fff;background:var(--field);box-shadow:inset 0 -3px 0 var(--led)}
+.pane{padding:16px;display:flex;flex-direction:column;gap:18px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:15px}
+.field > span:first-child,.field > label:first-child{color:#fff}
+.help{font-size:13px;color:var(--muted);line-height:1.4;margin:0}
+.err{font-size:13px;color:#ff8a96;min-height:1em}
+.sw{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.sw button{width:38px;height:38px;border:3px solid #000;box-shadow:2px 2px 0 #000;padding:0}
+.sw button[aria-pressed="true"]{outline:3px solid #fff;outline-offset:2px}
+input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;background:none;cursor:pointer}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{min-height:40px;padding:0 12px;background:var(--field);color:var(--paper);border:2px solid #4a2a34;font-size:15px}
+.seg button[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+.checks{display:flex;flex-wrap:wrap;gap:8px}
+.check{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;background:var(--field);border:2px solid #4a2a34;font-size:15px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--gold)}
+.colors{display:flex;flex-wrap:wrap;gap:14px}
+.colors label{display:flex;align-items:center;gap:8px;font-size:15px}
+.hrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.tlist li{display:flex;gap:6px;align-items:center;padding:6px 8px;background:var(--field);border:2px solid #3a222c}
+.tlist .meta{flex:1;min-width:0;display:flex;flex-direction:column}
+.tlist .t{font-size:16px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tlist .a{font-size:13px;color:var(--muted)}
+.tlist .yt{font-family:var(--pixel);font-size:9px;color:#7ad9a0}
+.tlist .yt.no{color:#ff8a96}
+.mini{min-width:36px;min-height:36px;background:#24141b;color:var(--paper);border:2px solid #4a2a34;font-size:14px}
+.mini[disabled]{opacity:.35}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.grid2 .wide{grid-column:1 / -1}
+@media (max-width:720px){
+  #np{width:190px;padding:8px 10px}
+  #np .title{font-size:16px}
+  #sign{max-width:calc(100% - 240px);padding:8px 10px}
+  #sign .name{font-size:16px}
+  #signFeat,#signTags{display:none}
+  #hint{top:calc(env(safe-area-inset-top,0px) + 150px);font-size:15px}
+  #pl{width:190px;padding:8px 10px}
+  #plRows{max-height:96px}
+  .row{font-size:14px}
+  #chat,#sayBox{left:max(16px,calc(env(safe-area-inset-left,0px) + 12px));width:auto;z-index:5}
+  #chat.closed{display:none}
+  #log{height:120px}
+  #chatToggle{display:block;position:absolute;min-height:48px}
+  #bottomL .btn{min-height:44px;font-size:15px;padding:0 10px}
+  .modal{padding:0;align-items:flex-end;justify-content:stretch}
+  .sheet{width:100%;max-height:62%}
+  .modal.center .sheet{max-height:100%}
+  .grid2{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){#hint,#toast,#fade{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="view" aria-label="3D 라이브클럽. 가고 싶은 곳을 터치하거나 클릭하면 유령이 이동해요"></canvas>
+  <div id="tags"></div>
+
+  <div class="hud L Tp" id="sign">
+    <div class="label" id="signLabel">B1 · LIVE CLUB</div>
+    <div class="name" id="signName">HONGDAE</div>
+    <div class="sub" id="signSub"></div>
+    <div id="signTags"></div>
+    <div id="signFeat"></div>
+  </div>
+
+  <div class="hud R Tp" id="np" aria-live="polite">
+    <div class="label" id="npLabel">NOW PLAYING</div>
+    <div class="title" id="npTitle"></div>
+    <div class="band" id="npBand"></div>
+    <div class="bar"><i id="prog" style="width:0%"></i></div>
+    <div class="times"><span id="tcur">00:00</span><span id="tend">00:00</span></div>
+  </div>
+
+  <section class="hud L" id="pl" aria-label="플레이리스트">
+    <div class="label" id="plLabel">PLAYLIST</div>
+    <div id="plRows"></div>
+  </section>
+
+  <div class="hud" id="hint" role="status"></div>
+
+  <div id="bottomL" class="L Bt">
+    <button class="btn" id="exitBtn" type="button">거리로 나가기 →</button>
+    <button class="btn alt" id="setBtn" type="button">클럽 설정</button>
+    <button class="btn alt" id="logoutBtn" type="button" hidden>로그아웃</button>
+  </div>
+
+  <button class="btn gold" id="enter" type="button" hidden></button>
+
+  <section class="hud R Bt" id="chat" aria-label="클럽 채팅">
+    <header>
+      <span class="label">CLUB CHAT · 예시 대화</span>
+      <button class="ghostbtn" id="chatClose" type="button">접기</button>
+    </header>
+    <div id="log" aria-live="polite"></div>
+    <form id="chatForm" class="lineform" autocomplete="off">
+      <label for="chatInput" class="vh">메시지</label>
+      <input class="inp" id="chatInput" maxlength="120" placeholder="감상을 남겨보세요" enterkeyhint="send">
+      <button class="btn" type="submit">보내기</button>
+    </form>
+  </section>
+  <button class="btn R Bt" id="chatToggle" type="button">채팅</button>
+
+  <section class="hud R Bt" id="sayBox" aria-label="말풍선" hidden>
+    <p class="help">거리에서는 말풍선만 잠깐 떠요. 대화는 클럽 안에서!</p>
+    <form id="sayForm" class="lineform" autocomplete="off">
+      <label for="sayInput" class="vh">말풍선</label>
+      <input class="inp" id="sayInput" maxlength="40" placeholder="안녕하세요!" enterkeyhint="send">
+      <button class="btn" type="submit">말하기</button>
+    </form>
+  </section>
+
+  <div id="toast" style="opacity:0" role="status"></div>
+  <div id="fade"></div>
+  <div id="rotate" class="gone" role="status" aria-live="polite"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="16" rx="1"/><path d="M3 21h11M3 21l2-2M3 21l2 2"/></svg><span>가로 모드로 돌리면 클럽이 더 넓게 보여요</span></div>
+
+  <!-- club settings (every change applies and saves right away) -->
+  <div class="modal" id="setModal" hidden role="dialog" aria-modal="true" aria-labelledby="setTitle">
+    <div class="sheet">
+      <header><div><h2 id="setTitle">CLUB SETTINGS</h2><span class="help">바꾸는 즉시 적용되고 저장돼요</span></div><button class="btn alt" type="button" data-close>닫기</button></header>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-tab="space">공간</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="stage">무대</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="light">조명</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="sign">클럽 정보</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="pl">플레이리스트</button>
+        <button type="button" role="tab" aria-selected="false" data-tab="del">클럽 삭제</button>
+      </div>
+
+      <div class="pane" data-pane="space">
+        <p class="help">여기 있는 항목은 모두 선택이에요. 그대로 둬도 클럽은 열려요.</p>
+        <div class="field"><span>무대 뒷벽</span><div class="seg" id="oBack"></div>
+          <div class="hrow"><div class="bthumb" id="backThumb">사진 없음</div>
+            <div style="display:flex;flex-direction:column;gap:8px"><label class="btn alt" for="oBackImg">뒷벽 사진 올리기<input type="file" id="oBackImg" accept="image/*" class="vh"></label>
+            <button type="button" class="btn alt" id="oBackImgDel">사진 빼기</button></div></div>
+          <p class="help">사진을 올리면 무대 뒤 벽 전체에 도트 느낌으로 붙어요. 가로로 긴 사진이 잘 맞아요.</p></div>
+        <div class="field"><span>바닥</span><div class="seg" id="oFloor"></div></div>
+        <div class="field"><span>드럼 러그</span><div class="seg" id="oRug"></div></div>
+        <div class="field"><span>벽 포스터 (최대 5장)</span>
+          <div class="slots3" id="posterSlots"></div>
+          <input type="file" id="oPoster" accept="image/*" class="vh" aria-label="포스터 이미지">
+          <p class="help">1~3번은 오른쪽 벽, 4~5번은 왼쪽 벽에 크기와 높이를 조금씩 다르게, 살짝 기울여 붙여요. 하나도 없으면 기본 포스터가 붙어요.</p></div>
+        <div class="field"><span>소품</span><div class="checks">
+          <label class="check"><input type="checkbox" id="pSofa">소파</label>
+          <label class="check"><input type="checkbox" id="pTables">바 테이블</label>
+          <label class="check"><input type="checkbox" id="pBall">미러볼</label></div></div>
+      </div>
+
+      <div class="pane" data-pane="stage" hidden>
+        <div class="field"><span>악기 구성</span><div class="seg" id="oKit"></div></div>
+        <div class="field"><span>무대 배치</span><div class="seg" id="oLayout"></div></div>
+        <div class="field"><span>악기 색</span><div class="colors">
+          <label><input type="color" id="cGuitar">기타</label>
+          <label><input type="color" id="cBass">베이스</label>
+          <label><input type="color" id="cDrum">드럼</label></div>
+          <p class="help">어쿠스틱·신스 구성에서는 해당 악기에만 적용돼요.</p></div>
+      </div>
+
+      <div class="pane" data-pane="light" hidden>
+        <div class="field"><span>조명 색</span><div class="sw" id="oLights"></div></div>
+        <div class="field"><span>조명 패턴</span><div class="seg" id="oPattern"></div></div>
+        <div class="field"><span>효과</span><div class="checks"><label class="check"><input type="checkbox" id="oSmoke">무대 연기</label></div></div>
+      </div>
+
+      <div class="pane" data-pane="sign" hidden>
+        <p class="help">클럽 이름만 꼭 필요하고, 나머지는 비워둬도 돼요.</p>
+        <div class="field"><label for="fName">클럽 이름<span class="req">필수</span></label><input class="inp" id="fName" maxlength="20" required><span class="err" id="nameErr"></span></div>
+        <div class="field"><label for="fIntro">한 줄 소개<span class="opt">선택</span></label><input class="inp" id="fIntro" maxlength="40" placeholder="예: 비 오는 날 듣는 개러지 록"></div>
+        <div class="field"><label for="fTags">장르 태그<span class="opt">선택</span></label><input class="inp" id="fTags" maxlength="40" placeholder="쉼표로 구분, 최대 3개 (예: 록, 슈게이즈)"></div>
+        <div class="field"><label for="fWelcome">환영 문구<span class="opt">선택</span></label><input class="inp" id="fWelcome" maxlength="40" placeholder="입장할 때 잠깐 떠요"></div>
+        <div class="field"><label for="fFeature">대표 곡<span class="opt">선택</span></label><select class="inp" id="fFeature"></select></div>
+        <div class="field"><span>간판 글꼴</span><div class="seg" id="oFont"></div></div>
+        <div class="field"><span>간판 색</span><div class="hrow"><label class="check"><input type="checkbox" id="oSignSame">조명 색과 같게</label><input type="color" id="oSignColor" aria-label="간판 색"></div></div>
+        <div class="field"><label for="fNeon">입구 네온 문구<span class="opt">선택</span></label><input class="inp" id="fNeon" maxlength="14" placeholder="예: LIVE TONIGHT"></div>
+      </div>
+
+      <div class="pane" data-pane="pl" hidden>
+        <div class="checks"><label class="check"><input type="checkbox" id="oShuffle">셔플 재생</label></div>
+        <p class="help">넣은 곡이 순서대로(셔플이면 날마다 다른 순서로) 계속 반복돼요. 같은 클럽에 있는 사람은 모두 같은 곡의 같은 순간을 들어요.</p>
+        <ul class="tlist" id="tList"></ul>
+        <form class="grid2" id="addForm" autocomplete="off">
+          <div class="field"><label for="aTitle">곡 제목</label><input class="inp" id="aTitle" maxlength="60"></div>
+          <div class="field"><label for="aArtist">아티스트</label><input class="inp" id="aArtist" maxlength="40"></div>
+          <div class="field wide"><label for="aUrl">유튜브 링크</label><input class="inp" id="aUrl" inputmode="url" placeholder="https://www.youtube.com/watch?v=..."></div>
+          <div class="field wide"><button class="btn" type="submit">곡 추가</button></div>
+          <div class="err wide" id="addErr"></div>
+          <p class="help wide">곡 제목과 아티스트는 직접 입력하고, 곡 길이는 링크에서 자동으로 계산돼요. 뮤직비디오나 라이브 클립 말고 "아티스트 - Topic" 채널의 오피셜 오디오 링크를 넣어주세요.</p>
+        </form>
+      </div>
+
+      <form class="pane" data-pane="del" hidden id="delForm" autocomplete="off">
+        <p class="help" style="font-size:15px;color:var(--paper)">클럽을 삭제하면 꾸미기, 플레이리스트, 채팅 기록이 모두 사라지고 되돌릴 수 없어요. 거리의 내 자리는 빈 공간이 돼요.</p>
+        <div class="field"><label for="fDel">확인을 위해 클럽 이름 <b id="delName" style="color:var(--gold);font-weight:400"></b>을 입력하세요</label><input class="inp" id="fDel"></div>
+        <button class="btn danger" type="submit" id="delBtn" disabled>클럽 삭제하기</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- create club -->
+  <div class="modal center" id="newModal" hidden role="dialog" aria-modal="true" aria-labelledby="newTitle">
+    <form class="sheet" id="newForm" autocomplete="off">
+      <header><h2 id="newTitle">NEW CLUB</h2><button class="btn alt" type="button" data-close>닫기</button></header>
+      <div class="pane">
+        <div class="field"><label for="nName">클럽 이름</label><input class="inp" id="nName" maxlength="20" placeholder="예: CLUB B1"></div>
+        <div class="field"><span>조명 색</span><div class="sw" id="nLights"></div></div>
+        <p class="help">나머지는 만든 뒤 클럽 설정에서 꾸밀 수 있어요.</p>
+        <div class="err" id="newErr"></div>
+        <button class="btn gold" type="submit">클럽 만들기</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- sign in / sign up -->
+<div id="auth" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <div class="sheet">
+    <div class="brand">
+      <div class="logo" id="authTitle">LIVE <b>CLUB</b></div>
+      <p>홍대 지하 라이브클럽 거리. 내 클럽을 열고, 다른 클럽에 놀러 가요.</p>
+    </div>
+
+    <div id="authLive">
+      <div class="tabs2" role="tablist">
+        <button type="button" role="tab" aria-selected="true" data-auth="login">로그인</button>
+        <button type="button" role="tab" aria-selected="false" data-auth="signup">회원가입</button>
+      </div>
+
+      <form class="pane" id="loginForm" data-authpane="login" autocomplete="on">
+        <div class="field"><label for="lEmail">이메일</label><input class="inp" id="lEmail" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="lPw">비밀번호</label><input class="inp" id="lPw" type="password" autocomplete="current-password" required></div>
+        <div class="err" id="loginErr"></div>
+        <button class="btn gold" type="submit" id="loginBtn">로그인</button>
+      </form>
+
+      <form class="pane" id="signupForm" data-authpane="signup" hidden autocomplete="on">
+        <div class="field"><label for="sName">아이디</label><input class="inp" id="sName" maxlength="12" autocomplete="username" required>
+          <p class="help">유령 머리 위에 뜨는 이름이에요. 영문, 숫자, 점(.), 밑줄(_)로 2~12자.</p></div>
+        <div class="field"><label for="sEmail">이메일</label><input class="inp" id="sEmail" type="email" autocomplete="email" required>
+          <p class="help">이 주소로 6자리 인증번호를 보내요.</p></div>
+        <div class="field"><label for="sPw">비밀번호</label><input class="inp" id="sPw" type="password" autocomplete="new-password" minlength="8" required>
+          <p class="help">8자 이상</p></div>
+        <div class="field"><label for="sPw2">비밀번호 확인</label><input class="inp" id="sPw2" type="password" autocomplete="new-password" required></div>
+        <div class="err" id="signupErr"></div>
+        <button class="btn gold" type="submit" id="signupBtn">인증번호 보내기</button>
+      </form>
+
+      <form class="pane" id="codeForm" data-authpane="code" hidden autocomplete="off">
+        <p class="ok" id="codeSent"></p>
+        <div class="field"><label for="cCode">인증번호 6자리</label><input class="inp" id="cCode" inputmode="numeric" maxlength="6" autocomplete="one-time-code" required></div>
+        <div class="err" id="codeErr"></div>
+        <button class="btn gold" type="submit" id="codeBtn">가입 완료</button>
+        <div class="hrow"><button type="button" class="linkbtn" id="resendBtn">인증번호 다시 보내기</button><button type="button" class="linkbtn" id="backBtn">이메일 다시 입력</button></div>
+      </form>
+    </div>
+
+    <form class="pane" id="demoForm" hidden autocomplete="off">
+      <p class="notice">아직 서버(Supabase)가 연결되지 않아서 체험 모드로 열려요. 이름만 정하면 둘러볼 수 있고, 꾸민 내용은 이 브라우저에만 저장돼요.</p>
+      <div class="field"><label for="dName">아이디</label><input class="inp" id="dName" maxlength="12" placeholder="예: ghost_01"></div>
+      <div class="err" id="demoErr"></div>
+      <button class="btn gold" type="submit">체험으로 들어가기</button>
+    </form>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const PX=3;
+const isTouch=matchMedia('(pointer: coarse)').matches;
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas=$('view');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false});
+renderer.setPixelRatio(1);
+const camera=new THREE.PerspectiveCamera(45,1,0.1,80);
+const clubScene=new THREE.Scene(); clubScene.background=new THREE.Color(0x07040a); clubScene.fog=new THREE.Fog(0x07040a,14,26);
+const streetScene=new THREE.Scene(); streetScene.background=new THREE.Color(0x0e0c22); streetScene.fog=new THREE.Fog(0x0e0c22,18,36);
+let T=clubScene;
+
+/* ---------- helpers ---------- */
+let seed=7; const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+function tex(w,h,draw,rx=1,ry=1){const c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');g.imageSmoothingEnabled=false;draw(g,w,h);
+  const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;
+  if(rx!==1||ry!==1){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);}return t;}
+const M=(c,o)=>new THREE.MeshLambertMaterial(Object.assign({color:c},o||{}));
+const B=(c)=>new THREE.MeshBasicMaterial({color:c});
+function box(w,h,d,mat,x,y,z,p){const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);(p||T).add(m);return m;}
+function cyl(r,h,mat,x,y,z,p,seg){const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg||12),mat);m.position.set(x,y,z);(p||T).add(m);return m;}
+function plane(w,h,mat,x,y,z,rx,ry){const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat);m.position.set(x,y,z);m.rotation.set(rx||0,ry||0,0);T.add(m);return m;}
+function group(parent){const g=new THREE.Group();(parent||T).add(g);return g;}
+
+/* ---------- textures ---------- */
+const brickPal=(g)=>{g.fillStyle='#3a1719';g.fillRect(0,0,32,16);g.fillStyle='#4c2124';g.fillRect(0,0,15,1);g.fillRect(16,8,15,1);
+  g.fillStyle='#1c0b0d';g.fillRect(0,7,32,1);g.fillRect(0,15,32,1);g.fillRect(15,0,1,7);g.fillRect(31,0,1,7);g.fillRect(7,8,1,7);g.fillRect(23,8,1,7);};
+const brickT=tex(32,16,brickPal,7,5);
+const FLOORS={
+  concrete:tex(16,16,(g)=>{g.fillStyle='#1a1216';g.fillRect(0,0,16,16);for(let i=0;i<30;i++){g.fillStyle=rnd()<.5?'#211820':'#150e12';g.fillRect(rnd()*16|0,rnd()*16|0,1,1);}},14,12),
+  wood:tex(32,8,(g)=>{g.fillStyle='#4a2c1c';g.fillRect(0,0,32,8);g.fillStyle='#3a2014';g.fillRect(0,3,32,1);g.fillRect(0,7,32,1);g.fillRect(11,0,1,3);g.fillRect(25,4,1,3);g.fillStyle='#56341f';g.fillRect(2,1,6,1);g.fillRect(15,5,7,1);},7,24),
+  checker:tex(2,2,(g)=>{g.fillStyle='#d8d0c0';g.fillRect(0,0,2,2);g.fillStyle='#141016';g.fillRect(0,0,1,1);g.fillRect(1,1,1,1);},14,12)};
+const FLOOR_LABELS={concrete:'콘크리트',wood:'나무 마루',checker:'체커보드'};
+const plankT=tex(32,8,(g)=>{g.fillStyle='#561520';g.fillRect(0,0,32,8);g.fillStyle='#3d0d16';g.fillRect(0,7,32,1);g.fillRect(20,0,1,7);g.fillRect(6,0,1,3);},8,6);
+const newsT=tex(96,72,(g,w,h)=>{g.fillStyle='#cbb68a';g.fillRect(0,0,w,h);
+  const pal=['#e8dcc0','#2f2519','#4a3c2a','#f2e8d0','#6e5c44','#e8dcc0','#d23a2a'];
+  for(let i=0;i<46;i++){const x=rnd()*w|0,y=rnd()*h|0,cw=8+rnd()*18|0,ch=6+rnd()*16|0,c=pal[rnd()*pal.length|0];
+    g.fillStyle=c;g.fillRect(x,y,cw,ch);
+    if(c==='#e8dcc0'||c==='#f2e8d0'){g.fillStyle='#8a7756';for(let ly=y+2;ly<y+ch-1;ly+=2)g.fillRect(x+1,ly,cw-2-(rnd()*4|0),1);}
+    if(c==='#2f2519'||c==='#4a3c2a'){g.fillStyle='#6e5c44';g.fillRect(x+cw/3|0,y+ch/4|0,cw/3|0,ch/2|0);}}});
+const BACKDROPS={collage:newsT,brick:tex(32,16,brickPal,3,4),velvet:tex(16,8,(g)=>{for(let x=0;x<16;x++){g.fillStyle=['#3a0c18','#2a0811','#1c050b','#2a0811'][x%4];g.fillRect(x,0,1,8);}},9,1)};
+const BACK_LABELS={collage:'신문 콜라주',brick:'벽돌',velvet:'벨벳 커튼',photo:'내 사진'};
+const RUGS={
+  persian:tex(32,20,(g)=>{g.fillStyle='#d6a865';g.fillRect(0,0,32,20);g.fillStyle='#8a4a2a';g.fillRect(2,2,28,16);g.fillStyle='#2b3a5c';g.fillRect(12,7,8,6);g.fillRect(14,5,4,10);g.fillRect(10,9,12,2);
+    g.fillStyle='#d6a865';for(let x=4;x<29;x+=4){g.fillRect(x,3,1,1);g.fillRect(x,16,1,1);}g.fillRect(15,9,2,2);}),
+  stripe:tex(32,20,(g)=>{const c=['#2a3a5c','#d8c8a0','#8a2a2a','#d8c8a0'];for(let y=0;y<20;y++){g.fillStyle=c[(y>>1)%4];g.fillRect(0,y,32,1);}})};
+const RUG_LABELS={persian:'페르시안',stripe:'줄무늬',none:'없음'};
+const tweedT=tex(8,8,(g)=>{g.fillStyle='#a8946c';g.fillRect(0,0,8,8);g.fillStyle='#8a7854';for(let i=0;i<8;i++)g.fillRect(i,7-i,1,1);},5,4);
+const posterT=tex(12,16,(g)=>{g.fillStyle='#2a1c22';g.fillRect(0,0,12,16);g.fillStyle='#8a6a5a';g.fillRect(2,2,8,8);g.fillStyle='#d23a2a';g.fillRect(2,12,8,2);});
+const exitT=tex(16,6,(g)=>{g.fillStyle='#1f8a52';g.fillRect(0,0,16,6);g.fillStyle='#d9ffe8';[[2,1,1,4],[2,1,3,1],[2,3,2,1],[2,4,3,1],[6,1,1,1],[8,1,1,1],[7,2,1,2],[6,4,1,1],[8,4,1,1],[10,1,1,4],[12,1,3,1],[13,2,1,3]].forEach(r=>g.fillRect(...r));});
+const keysT=tex(84,6,(g)=>{g.fillStyle='#f2f0ea';g.fillRect(0,0,84,6);g.fillStyle='#b8b4ac';for(let i=1;i<28;i++)g.fillRect(i*3-1,0,1,6);
+  g.fillStyle='#1a1a1e';for(let i=0;i<27;i++){if([0,1,3,4,5].includes(i%7))g.fillRect(i*3+1,0,2,4);}});
+const padsT=tex(8,4,(g)=>{const c=['#ff4458','#ffd23a','#2fd1e0','#8a4dff'];for(let i=0;i<8;i++)for(let j=0;j<4;j++){g.fillStyle=(i+j)%3?'#2a2a30':c[(i+j)%4];g.fillRect(i,j,1,1);}});
+const ballT=tex(16,8,(g)=>{for(let x=0;x<16;x++)for(let y=0;y<8;y++){g.fillStyle=['#e8e8f0','#8a8a9a','#ffffff','#b8b8c8'][(x*3+y*5)%4];g.fillRect(x,y,1,1);}});
+const hazeT=(()=>{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');const gr=g.createRadialGradient(32,32,2,32,32,32);
+  gr.addColorStop(0,'rgba(255,255,255,.9)');gr.addColorStop(1,'rgba(255,255,255,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);return new THREE.CanvasTexture(c);})();
+
+/* ---------- club room ---------- */
+T=clubScene;
+const S=0.5;
+const floorMesh=plane(14,12,M(0xffffff,{map:FLOORS.concrete}),0,0,0,-Math.PI/2);
+plane(12,4.6,M(0xffffff,{map:brickT}),-7,2.3,0,0,Math.PI/2);
+plane(12,4.6,M(0x160b0f),7,2.3,0,0,-Math.PI/2);
+plane(14,4.6,M(0x140a0e),0,2.3,-6);
+// five poster spots, deliberately uneven: [wall x, y, z, width, tilt]. 1-3 right wall, 4-5 left wall
+const POSTER_SPOTS=[[6.98,2.75,-2.7,1.25,-.05],[6.97,1.85,-.75,.78,.09],[6.96,2.45,1.25,1.02,-.03],[-6.98,2.55,-1.9,1.3,.06],[-6.97,2.15,1.6,.82,-.1]];
+const posterMeshes=POSTER_SPOTS.map(([x,y,z,w,tilt])=>{const m=plane(w,w*4/3,M(0xffffff,{map:posterT}),x,y,z,0,x>0?-Math.PI/2:Math.PI/2);m.rotation.z=tilt;return m;});
+plane(.8,.3,new THREE.MeshBasicMaterial({map:exitT}),6.97,3.4,3.2,0,-Math.PI/2);
+const backdrop=plane(5.6,3.6,M(0xffffff,{map:newsT}),0,S+1.85,-5.92);
+box(2.2,4.1,.25,M(0x1a0f14),-3.9,S+2,-5.8); box(1.9,4.1,.25,M(0x1a0f14),3.75,S+2,-5.8);
+for(let x=-4.9;x<=4.7;x+=.36){ if(Math.abs(x)>2.8) box(.12,4.1,.32,M(0x26141b),x,S+2,-5.78); }
+box(12,.12,.12,M(0x2a1f26),0,4.3,-5.5);
+const ledMat=new THREE.MeshBasicMaterial({color:0xff5566});
+for(let i=0;i<34;i++) box(.08,.08,.08,ledMat,-4.8+i*0.29,4.16,-5.45);
+box(10,.02,.02,ledMat,0,4.16,-5.42);
+
+// stage group (moves for the corner layout)
+const stageG=group(clubScene); T=stageG;
+box(13,S,3.5,M(0xffffff,{map:plankT}),0,S/2,-4.25);
+const edgeMat=B(0x7a1f2c);
+box(13,.06,.06,edgeMat,0,S,-2.5);
+const stand=M(0x55555f), skin=M(0xefe6d4), chrome=M(0xb9b9c4), head=M(0x1d1828), gold=M(0xd8ad4a,{emissive:0x3a2600});
+const drumMat=M(0xa8703c), guitarMat=M(0x0c0c10), bassMat=M(0xe3342c);
+function wedge(x,z){box(.9,.4,.5,M(0x1e1215),x,S+.2,z).rotation.x=-.45;box(.8,.03,.02,M(0x5a1822),x,S+.4,z-.12);}
+wedge(-3.4,-2.8); wedge(0,-2.75); wedge(3.6,-2.8);
+function mic(x,z,h,boom,p){const P=p||T;cyl(.015,h,stand,x,S+h/2,z,P);[0,2.1,4.2].forEach(a=>{box(.3,.02,.02,stand,x+Math.cos(a)*.12,S+.02,z+Math.sin(a)*.12,P).rotation.y=-a;});
+  if(boom){box(.6,.02,.02,stand,x-.28,S+h,z,P).rotation.z=.12;cyl(.035,.12,M(0x9a9aa4),x-.58,S+h+.04,z,P);} else cyl(.035,.13,M(0x9a9aa4),x,S+h+.06,z,P);}
+mic(0,-3.2,1.55,false);
+cyl(.012,.4,M(0xb8b8b8),-2.1,S+.2,-3); cyl(.1,.02,M(0x888890),-2.1,S+.01,-3);
+const bulb=new THREE.Mesh(new THREE.SphereGeometry(.07,8,6),B(0xfff2c0)); bulb.position.set(-2.1,S+.45,-3); stageG.add(bulb);
+const rugMesh=plane(2.6,1.7,M(0xffffff,{map:RUGS.persian}),0,S+.23,-4.7,-Math.PI/2);
+function eg(x,z,bm,neckLen,isBass,p){const g=new THREE.Group();
+  box(.42,.48,.07,bm,0,.42,0,g); box(.12,.14,.07,bm,-.16,.72,0,g); box(.12,isBass?.24:.14,.07,bm,.15,isBass?.77:.72,0,g);
+  box(.2,.3,.02,M(0xf2efe6),.06,.46,.045,g); box(.14,.03,.02,M(0x222226),-.04,.5,.06,g);
+  if(isBass) box(.14,.03,.02,M(0x222226),-.04,.38,.06,g);
+  box(.07,neckLen,.05,M(0xe2c991),0,.66+neckLen/2,0,g); box(.1,.2,.05,M(0xd8c08a),0,.76+neckLen,0,g);
+  box(.3,.04,.22,M(0x2a2a2e),0,.04,.05,g); g.position.set(x,S,z); g.rotation.x=-.12; (p||T).add(g); return g;}
+function keyboard(x,z,ry,p,y){const g=new THREE.Group();
+  [-.32,.32].forEach(px=>{[.6,-.6].forEach(r=>{box(.05,1,.05,stand,px,.42,0,g).rotation.z=r;});});
+  box(1.3,.1,.38,M(0x141418),0,.85,0,g); box(1.18,.02,.17,M(0xffffff,{map:keysT}),0,.91,.08,g);
+  box(.5,.02,.08,M(0x3a3a44),-.2,.91,-.11,g); box(.06,.02,.04,B(0xff4458),.3,.91,-.11,g);
+  g.position.set(x,S+(y||0),z); g.rotation.y=ry; p.add(g); return g;}
+
+// BAND kit: keys left · drums center back · vocal+guitar center · bass right
+const bandG=group(stageG); T=bandG;
+const D=S+.22;
+box(3,.22,2.1,M(0x2a1a1e),0,S+.11,-4.75); box(3,.03,.03,edgeMat,0,D,-3.7);
+cyl(.36,.42,[drumMat,head,head],0,D+.37,-4.5).rotation.x=Math.PI/2;
+cyl(.11,.01,B(0xe2384a),0,D+.37,-4.28).rotation.x=Math.PI/2;
+cyl(.17,.22,[drumMat,skin,skin],-.05,D+.93,-4.55).rotation.x=.35;
+cyl(.23,.42,[drumMat,skin,skin],.75,D+.48,-4.45); [-.15,.15].forEach(d=>cyl(.015,.3,stand,.75+d,D+.15,-4.45+d));
+cyl(.18,.13,[chrome,skin,skin],-.65,D+.62,-4.15); cyl(.015,.56,stand,-.65,D+.28,-4.15);
+cyl(.015,1.1,stand,-1.15,D+.55,-4.3); cyl(.21,.01,gold,-1.15,D+1.1,-4.3); cyl(.21,.01,gold,-1.15,D+1.06,-4.3);
+cyl(.015,1.4,stand,-.6,D+.7,-4.85); cyl(.27,.012,gold,-.6,D+1.42,-4.85).rotation.z=.25;
+cyl(.015,1.15,stand,1.0,D+.58,-4.9); cyl(.3,.012,gold,1.0,D+1.17,-4.9).rotation.z=-.2;
+cyl(.18,.12,M(0x111114),0,D+.55,-5.2); cyl(.03,.5,stand,0,D+.25,-5.2);
+keyboard(-3.5,-3.75,.18,bandG);
+box(.6,.6,.4,M(0x1c1418),-4.7,S+.3,-4.6); box(.5,.45,.02,M(0x2c2026),-4.7,S+.3,-4.39);
+mic(-2.8,-3.35,1.4,true); mic(3.1,-3.35,1.4,true); mic(2.1,-4.45,.45,false);
+box(1,.8,.45,M(0xe3cfa2),2.1,S+.4,-5.0); box(.86,.56,.02,M(0xffffff,{map:tweedT}),2.1,S+.36,-4.765); box(.4,.05,.06,M(0x111114),2.1,S+.83,-5.0);
+box(.85,1.1,.5,M(0x1c1418),4.7,S+.55,-4.7); box(.75,.95,.02,M(0x2c2026),4.7,S+.55,-4.44);
+box(.85,.28,.45,M(0x111114),4.7,S+1.25,-4.7); box(.7,.08,.02,M(0x9a9aa4),4.7,S+1.25,-4.47);
+box(.32,1.3,.18,M(0x0d0a0c),5.6,S+.63,-5.3).rotation.z=.12;
+eg(.95,-3.6,guitarMat,.85,false); eg(3.7,-3.7,bassMat,1.05,true);
+box(.05,.6,.03,M(0xd6c7a0),1.21,S+.5,-3.55);
+box(1,.06,.35,M(0x1a1a1e),1.0,S+.03,-2.95);
+[[0x2c2c32,-.38],[0x3faa7c,-.2],[0xeeeeee,-.04],[0x111114,.24]].forEach(([c,dx],i)=>box(i===3?.36:.14,.08,.22,M(c),1.0+dx,S+.1,-2.95));
+
+// ACOUSTIC kit: two acoustic guitars, cajon, stools
+const acouG=group(stageG); T=acouG;
+function acoustic(x,z){const g=new THREE.Group(),rim=M(0x7a4a24);
+  const lo=cyl(.3,.1,[rim,guitarMat,guitarMat],0,.42,0,g);lo.rotation.x=Math.PI/2;
+  const up=cyl(.23,.1,[rim,guitarMat,guitarMat],0,.8,0,g);up.rotation.x=Math.PI/2;
+  cyl(.07,.11,B(0x1a0e06),0,.74,.005,g).rotation.x=Math.PI/2;
+  box(.24,.04,.02,M(0x3a2414),0,.36,.06,g); box(.07,.7,.05,M(0x5e3a20),0,1.35,0,g); box(.11,.18,.05,M(0x3a2414),0,1.78,0,g);
+  box(.3,.04,.25,M(0x2a2a2e),0,.04,.05,g); g.position.set(x,S,z); g.rotation.x=-.12; acouG.add(g);}
+acoustic(-1.2,-4.2); acoustic(1.4,-4.3);
+box(.4,.6,.4,drumMat,.2,S+.3,-4.5); box(.14,.14,.02,B(0x1a0e06),.2,S+.42,-4.29);
+[[-.8,-3.6],[.9,-3.6]].forEach(([x,z])=>{cyl(.2,.05,M(0x2a1a14),x,S+.7,z);[-.12,.12].forEach(d=>cyl(.02,.7,stand,x+d,S+.35,z));});
+mic(-1.2,-3.2,1.1,false,acouG); mic(1.4,-3.25,1.1,false,acouG);
+
+// SYNTH kit: stacked keys, drum machine, laptop desk, speakers
+const synthG=group(stageG); T=synthG;
+keyboard(-1.2,-3.9,0,synthG); keyboard(-1.2,-4.15,0,synthG,.3);
+box(1.6,.06,.7,M(0x1a1a1e),1.4,S+.8,-4.1); [-.7,.7].forEach(d=>box(.06,.8,.6,M(0x2a2a30),1.4+d,S+.4,-4.1));
+box(.5,.06,.4,bassMat,1.0,S+.86,-4.0); box(.42,.01,.32,M(0xffffff,{map:padsT}),1.0,S+.9,-4.0);
+box(.5,.02,.35,M(0x2a2a30),1.75,S+.84,-4.05); const lid=box(.5,.32,.02,guitarMat,1.75,S+1.0,-4.22); lid.rotation.x=-.2;
+[[-3,-4.8],[3.4,-4.8]].forEach(([x,z])=>{box(.6,1.2,.5,M(0x141418),x,S+.6,z);cyl(.18,.02,M(0x2c2c32),x,S+.8,z+.26).rotation.x=Math.PI/2;cyl(.1,.02,M(0x2c2c32),x,S+1.1,z+.26).rotation.x=Math.PI/2;});
+synthG.visible=false; acouG.visible=false;
+
+// props
+T=clubScene;
+const sofaG=group(clubScene); T=sofaG;
+box(.9,.4,2,M(0x2a4a3a),-6.3,.2,2.8); box(.3,.6,2,M(0x2a4a3a),-6.65,.7,2.8); box(.9,.55,.25,M(0x23402f),-6.3,.45,1.75); box(.9,.55,.25,M(0x23402f),-6.3,.45,3.85);
+const tablesG=group(clubScene); T=tablesG;
+[[5.4,1.2],[5.6,3.6],[-5.5,.6]].forEach(([x,z])=>{cyl(.4,.05,M(0x2a1c22),x,1.05,z);cyl(.04,1,stand,x,.52,z);cyl(.25,.04,M(0x1e1418),x,.02,z);});
+const ballG=group(clubScene); T=ballG;
+cyl(.01,.5,stand,0,4.35,-.5);
+const ball=new THREE.Mesh(new THREE.SphereGeometry(.32,10,8),M(0xffffff,{map:ballT,emissive:0x333344})); ball.position.set(0,3.95,-.5); ballG.add(ball);
+T=clubScene;
+box(.3,4.6,.3,M(0x1c1216),-6.5,2.3,4.6); box(.3,4.6,.3,M(0x1c1216),6.5,2.3,4.6);
+
+// haze sprites
+const hazeMat=new THREE.SpriteMaterial({map:hazeT,transparent:true,opacity:.16,depthWrite:false,color:0xff3050});
+const haze=[]; for(let i=0;i<7;i++){const s=new THREE.Sprite(hazeMat);s.scale.set(4.5,2.4,1);s.position.set(-5+i*1.7,1.4+rnd()*.8,-2.6+rnd()*1.5);s.userData.p=rnd()*6;clubScene.add(s);haze.push(s);}
+
+// lights
+clubScene.add(new THREE.AmbientLight(0x4a2a34,.85));
+const red1=new THREE.PointLight(0xff2a44,2.2,12,1.6); red1.position.set(0,4,-3.6); clubScene.add(red1);
+const red2=new THREE.PointLight(0xff3050,1.4,9,1.6); red2.position.set(-1.5,3.2,-2.8); clubScene.add(red2);
+const warm=new THREE.SpotLight(0xff9a4a,1.6,12,.6,.6,1); warm.position.set(0,3.6,-1.5); warm.target.position.set(0,2.4,-6); clubScene.add(warm,warm.target);
+const bulbL=new THREE.PointLight(0xffd27a,1.1,3.2,2); bulbL.position.set(-2.1,S+.5,-2.9); clubScene.add(bulbL);
+const purple=new THREE.PointLight(0x7b3cff,1.1,11,1.5); purple.position.set(-5.5,3.2,3); clubScene.add(purple);
+const fillL=new THREE.PointLight(0xff6a7a,.5,12,1.5); fillL.position.set(2,3,4); clubScene.add(fillL);
+
+/* ---------- ghosts ---------- */
+const GHOST=["......XXXXXXXX......","....XXXXXXXXXXXX....","...XXXXXXXXXXXXXX...","..XXXXXXXXXXXXXXXX..",".XXXXXXXXXXXXXXXXXX.",".XXXXXXXXXXXXXXXXXX.",
+"XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX","XXXXEEEEXXXXXEEEEXXX","XXXXEEEEXXXXXEEEEXXX","XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXMMMXXXXXXXX",
+"XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX","XXXXXXXXXXXXXXXXXXXX",
+".XXXXX.XXXX.XXXX.XX.","..XXX...XX...XX...X."];
+function upTex(rows,palette,scale){const w=rows[0].length,h=rows.length,c=document.createElement('canvas');c.width=w*scale;c.height=h*scale;const g=c.getContext('2d');
+  rows.forEach((row,y)=>[...row].forEach((ch,x)=>{const col=palette(ch,x,y,rows);if(!col)return;g.fillStyle=col;g.fillRect(x*scale,y*scale,scale,scale);}));
+  const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
+const ghostT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
+  const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
+const crownT=upTex(["X...X...X","X..XXX..X","XXXXRXXXX","XXXXXXXXX","XXXXXXXXX","ddddddddd"],(ch)=>ch==='.'?null:ch==='R'?'#ff4458':ch==='d'?'#c9971a':'#ffd23a',4);
+const shadowT=tex(16,8,(g)=>{g.fillStyle='rgba(0,0,0,.55)';g.fillRect(3,1,10,6);g.fillRect(1,2,14,4);});
+const tagsEl=$('tags');
+function makeGhost(scene,name,x,z,opts={}){
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:ghostT,transparent:true,alphaTest:.5,fog:true})); s.scale.set(1.0,1.05,1);
+  const sh=new THREE.Mesh(new THREE.PlaneGeometry(.9,.45),new THREE.MeshBasicMaterial({map:shadowT,transparent:true,depthWrite:false})); sh.rotation.x=-Math.PI/2;
+  const crown=new THREE.Sprite(new THREE.SpriteMaterial({map:crownT,transparent:true,alphaTest:.5})); crown.scale.set(.45,.3,1); crown.visible=!!opts.owner;
+  scene.add(s,sh,crown);
+  const tag=document.createElement('div'); tag.className='tag'+(opts.me?' me':''); tag.textContent=name; tagsEl.appendChild(tag);
+  return {name,s,sh,crown,tag,pos:new THREE.Vector3(x,0,z),target:null,phase:rnd()*6,next:1+rnd()*4,bubble:null,me:!!opts.me};}
+function dropGhost(g){[g.s,g.sh,g.crown].forEach(o=>o.parent&&o.parent.remove(o));g.tag.remove();if(g.bubble)g.bubble.remove();}
+const me=makeGhost(clubScene,'guest',0,4,{me:true});
+let clubGhosts=[], streetGhosts=[];
+const POOL=['haneul','yuna.k','dohyun','mint_b','noodle','jae','ria.p','seoyeon'];
+const SAMPLES=(window.CLUB_CONFIG||{}).SHOW_SAMPLES!==false;   // sample clubs, ghosts and chat lines while the street is empty
+
+/* ---------- data (prototype: this browser only; the real site stores it per account in Supabase) ---------- */
+const LIGHTS=['#ff3050','#ff5fa8','#8a4dff','#3a7bff','#2fd1e0','#2fd17a','#ffa23a','#fff1d6'];
+const FONTS={pixel:'Silkscreen, "Do Hyeon", sans-serif',bold:'"Black Han Sans", sans-serif',hand:'Dokdo, "Do Hyeon", sans-serif'};
+const FONT_LABELS={pixel:'도트',bold:'굵은 고딕',hand:'손글씨'};
+const KIT_LABELS={band:'밴드',acoustic:'어쿠스틱',synth:'신스'};
+const LAYOUT_LABELS={center:'가운데',corner:'왼쪽 코너'};
+const PATTERN_LABELS={steady:'고정',shift:'천천히 바뀜',pulse:'비트에 맞춰'};
+const BASE={light:'#ff3050',pattern:'steady',smoke:false,floor:'concrete',rug:'persian',posters:[],backdropImg:null,props:{sofa:false,tables:true,ball:false},
+  kit:'band',layout:'center',colors:{guitar:'#0c0c10',bass:'#e3342c',drum:'#a8703c'},backdrop:'collage',
+  signFont:'pixel',signColor:null,neon:'',tags:[],feature:-1,welcome:'',intro:'',shuffle:false,set:[]};
+function norm(c){const o=Object.assign({},BASE,c,{props:Object.assign({},BASE.props,c.props||{}),colors:Object.assign({},BASE.colors,c.colors||{})});
+  if(!Array.isArray(o.posters))o.posters=[]; if(o.poster){o.posters=[o.poster];delete o.poster;}
+  if(o.backdrop==='photo'&&!o.backdropImg)o.backdrop='collage'; return o;}
+const EX=(a,b,c)=>[{t:'[예시 곡 1]',b:'[아티스트]',u:'',d:a},{t:'[예시 곡 2]',b:'[아티스트]',u:'',d:b},{t:'[예시 곡 3]',b:'[아티스트]',u:'',d:c}];
+const DEFAULT_MINE={id:'mine',name:'CLUB O.de',owner:'developer',intro:'개발자 클럽 · 24시간 운영',dev:true,tags:['밴드','록'],welcome:'어서 오세요, CLUB O.de입니다',feature:0,shuffle:true,
+  set:[{t:'Happy Death Day',b:'Xdinary Heroes',u:'',d:197},{t:'Test Me',b:'Xdinary Heroes',u:'',d:192},{t:'Troubleshooting',b:'Xdinary Heroes',u:'',d:200}]};
+const CFG=window.CLUB_CONFIG||{};
+// who is signed in; the developer's account owns the big club in the middle (slot 2), everyone else gets the lot at the end (slot 5)
+let ME_NAME='guest', ME_ID='guest', isDev=false, MY_SLOT=5, myClub=null;
+const myKey=()=>'cs.club.'+ME_ID;
+function loadMine(){
+  try{const raw=localStorage.getItem(myKey());
+    if(raw===null) myClub=isDev?norm(JSON.parse(JSON.stringify(DEFAULT_MINE))):null;
+    else {const v=JSON.parse(raw);myClub=v?norm(v):null;}}
+  catch(e){myClub=null;}
+  if(myClub){myClub.owner=ME_NAME;myClub.dev=isDev;}}
+function saveMine(){try{localStorage.setItem(myKey(),JSON.stringify(myClub));}catch(e){toast('저장 공간이 부족해서 이 변경은 저장되지 않았어요');}}
+// what everyone else sees in the middle until the developer account signs in and decorates it
+const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:CFG.DEV_USERNAME||'developer',slot:2,ownerHere:false}));
+const others=[
+  norm({id:'basement',name:'BASEMENT 404',owner:'minjae',slot:0,ownerHere:true,light:'#3a7bff',pattern:'shift',smoke:true,rug:'none',props:{sofa:true,tables:false},
+    colors:{guitar:'#d8d2c4',bass:'#1e2a4a',drum:'#2a2a30'},backdrop:'brick',signFont:'bold',neon:'SHOEGAZE ONLY',tags:['포스트록','슈게이즈'],intro:'볼륨 크게, 생각은 작게',welcome:'볼륨 크게 하고 들어오세요',set:EX(214,248,193)}),
+  norm({id:'lowfi',name:'LOWFI ROOM',owner:'lowfi.k',slot:1,ownerHere:false,light:'#8a4dff',floor:'wood',rug:'stripe',props:{sofa:true,tables:true},
+    kit:'synth',colors:{guitar:'#2a2a30',bass:'#8a4dff'},backdrop:'velvet',signFont:'hand',neon:'stay & work',tags:['로파이','작업용'],intro:'작업할 때 틀어두는 방',welcome:'편하게 작업하다 가세요',set:EX(201,177,226)}),
+  norm({id:'garage',name:"JIU'S GARAGE",owner:'jiu_88',slot:3,ownerHere:true,light:'#2fd17a',pattern:'pulse',smoke:true,layout:'corner',
+    colors:{guitar:'#e8e4da',bass:'#111114',drum:'#8a1a1a'},neon:'LOUD',tags:['개러지'],intro:'개러지 록만 틀어요',set:EX(166,189,172)}),
+  norm({id:'bside',name:'B-SIDE HALL',owner:'b-side',slot:4,ownerHere:true,light:'#ffa23a',floor:'checker',rug:'none',props:{ball:true,tables:true},
+    kit:'acoustic',colors:{guitar:'#c98a4a',drum:'#6a4020'},backdrop:'brick',signFont:'bold',neon:'B-SIDES',tags:['수록곡'],intro:'타이틀곡 말고 수록곡',welcome:'타이틀곡은 다른 데서 들으세요',set:[]})];
+const chats={};
+
+/* ---------- street ---------- */
+// street, left to right: plaza · 2 clubs · developer club (center, larger) · 2 clubs · music shop
+const SLOTS=[{x:-15.8,w:5.2},{x:-9.9,w:5.2},{x:0,w:8.4,dev:true},{x:9.9,w:5.2},{x:15.8,w:5.2},{x:21.7,w:5.2,shop:true}];
+const PLAZA_X=-22.4;
+const doors=[], slotGroups=[];
+const sidewalkT=tex(16,16,(g)=>{g.fillStyle='#4a4650';g.fillRect(0,0,16,16);g.fillStyle='#3a3640';g.fillRect(0,7,16,1);g.fillRect(0,15,16,1);g.fillRect(7,0,1,7);g.fillRect(15,8,1,7);g.fillStyle='#55505c';g.fillRect(1,1,5,1);g.fillRect(9,9,5,1);},40,4);
+const asphaltT=tex(16,16,(g)=>{g.fillStyle='#1e1d26';g.fillRect(0,0,16,16);for(let i=0;i<24;i++){g.fillStyle=rnd()<.5?'#26242e':'#18171f';g.fillRect(rnd()*16|0,rnd()*16|0,1,1);}},40,6);
+const plazaT=tex(16,16,(g)=>{g.fillStyle='#5a3a34';g.fillRect(0,0,16,16);g.fillStyle='#452c28';g.fillRect(0,7,16,1);g.fillRect(0,15,16,1);g.fillRect(3,0,1,7);g.fillRect(11,8,1,7);g.fillStyle='#6a4840';g.fillRect(5,2,4,1);g.fillRect(13,10,2,1);},4,3);
+const stairT=tex(16,24,(g)=>{g.fillStyle='#020104';g.fillRect(0,0,16,24);for(let k=0;k<8;k++){const v=70-k*9;g.fillStyle=`rgb(${v},${v-6},${v+4})`;g.fillRect(0,23-k*3,16,1);}});
+let muralT;
+function signTex(text,col,sub,font){const c=document.createElement('canvas');c.width=192;c.height=48;const g=c.getContext('2d');
+  g.fillStyle='#0b0710';g.fillRect(0,0,192,48);g.fillStyle=col;g.fillRect(0,0,192,3);g.fillRect(0,45,192,3);g.fillRect(0,0,3,48);g.fillRect(189,0,3,48);
+  const fam=FONTS[font]||FONTS.pixel; let fs=font==='hand'?26:20; g.font=fs+'px '+fam; while(g.measureText(text).width>176&&fs>9){fs--;g.font=fs+'px '+fam;}
+  g.textAlign='center';g.textBaseline='middle';g.fillStyle=col;g.fillText(text,96,20);
+  g.font='10px '+FONTS.pixel;g.fillStyle='#f4e9dc';g.fillText(sub,96,38);
+  const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
+function neonTex(text,col,font){const c=document.createElement('canvas');c.width=192;c.height=40;const g=c.getContext('2d');
+  const fam=FONTS[font]||FONTS.pixel; let fs=font==='hand'?28:20; g.font=fs+'px '+fam; while(g.measureText(text).width>170&&fs>9){fs--;g.font=fs+'px '+fam;}
+  g.textAlign='center';g.textBaseline='middle';g.shadowColor=col;g.shadowBlur=10;g.fillStyle=col;g.fillText(text,96,21);g.shadowBlur=0;g.fillStyle='#fff';g.globalAlpha=.55;g.fillText(text,96,21);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
+const BCOL=[0x3a2a3a,0x2f3442,0x4a2f2a,0x3d3346,0x2e3a34,0x433a2c];
+function clubAtSlot(i){if(i===MY_SLOT)return myClub;if(i===2&&!isDev)return devClub;return SAMPLES?others.find(c=>c.slot===i)||null:null;}
+function buildSlot(i){
+  if(slotGroups[i]) streetScene.remove(slotGroups[i]);
+  const g=new THREE.Group(); slotGroups[i]=g; streetScene.add(g); const prev=T; T=g;
+  let s=11+i*31; const r=()=>(s=(s*16807)%2147483647)/2147483647;
+  const def=SLOTS[i], x=def.x, w=def.w, big=!!def.dev, h=big?11:6.5+((i*7)%3)*1.4;
+  box(w,h,4,M(big?0x2a2236:BCOL[i]),x,h/2,-8);
+  const cols=big?[-3,-1.5,0,1.5,3]:[-1.5,0,1.5];
+  for(let y=big?5.4:3.9;y<h-.6;y+=1.3) cols.forEach(k=>{const lit=r()<.45; box(.9,.7,.06,lit?B(0xffd98a):M(0x1a2030),x+k,y,-5.98);});
+  box(w-.3,big?3.6:2.6,.1,M(0x120e16),x,big?1.8:1.3,-5.97);
+  const dx=big?x:x+w/2-1.1, sw=big?1.9:1.3;
+  const sign=(text,col,sub,font)=>big
+    ? plane(5.6,1.4,new THREE.MeshBasicMaterial({map:signTex(text,col,sub,font)}),x,4.45,-5.9)
+    : plane(3.4,.85,new THREE.MeshBasicMaterial({map:signTex(text,col,sub,font)}),x-.7,3.05,-5.9);
+  const stairs=(col,glow)=>{plane(sw,1.9,new THREE.MeshBasicMaterial({map:stairT}),dx,.02,-5.0,-Math.PI/2);
+    box(.06,.9,1.9,M(0x8a8a94),dx-sw/2-.03,.45,-5.0); box(.06,.9,1.9,M(0x8a8a94),dx+sw/2+.03,.45,-5.0);
+    plane(sw+1.1,2.6,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:glow,depthWrite:false,blending:THREE.AdditiveBlending}),dx,.016,-4.4,-Math.PI/2);};
+  // marquee bulbs frame the developer club's sign
+  const marquee=(col)=>{const m=B(col);for(let k=0;k<=14;k++){const bx=x-2.9+k*5.8/14;box(.09,.09,.06,m,bx,5.22,-5.88);box(.09,.09,.06,m,bx,3.68,-5.88);}
+    for(let k=1;k<4;k++){const by=3.68+k*1.54/4;box(.09,.09,.06,m,x-2.9,by,-5.88);box(.09,.09,.06,m,x+2.9,by,-5.88);}};
+  if(def.shop&&MY_SLOT!==i){ sign('MUSIC SHOP','#c9b8a6','악기점 · 준비 중','pixel'); doors[i]=null; }
+  else { const club=clubAtSlot(i);
+    if(!club&&i!==MY_SLOT){ sign('COMING SOON','#8a8090','곧 새 클럽이 열려요','pixel'); doors[i]=null; }
+    else if(!club){ sign('빈 공간','#ffd23a','내 클럽 만들기','bold'); stairs('#ffd23a',.18); doors[i]={x:dx,z:-3.7,create:true}; }
+    else { const sc=club.signColor||club.light;
+      sign(club.name,sc,club.dev?'B1 · 24H OPEN':'B1 · LIVE',club.signFont); stairs(club.light,.35);
+      if(big) marquee(0xffe3a0);
+      if(club.neon) plane(2.6,.55,new THREE.MeshBasicMaterial({map:neonTex(club.neon,sc,club.signFont),transparent:true,depthWrite:false}),big?x-2.6:x-.9,1.7,-5.9);
+      doors[i]={x:dx,z:-3.7,club}; } }
+  T=prev;}
+let signTimer; function refreshMySign(){clearTimeout(signTimer);signTimer=setTimeout(()=>buildSlot(MY_SLOT),250);}
+function buildStreet(){
+  T=streetScene;
+  muralT=tex(64,32,(g)=>{g.fillStyle='#2a2440';g.fillRect(0,0,64,32);const c=['#ff3050','#ffd23a','#2fd1e0','#8a4dff','#2fd17a','#ff5fa8'];
+    for(let i=0;i<18;i++){g.fillStyle=c[i%c.length];g.fillRect(rnd()*60|0,rnd()*28|0,3+rnd()*8|0,2+rnd()*6|0);}
+    g.fillStyle='#000';g.fillRect(6,11,52,11);g.fillStyle='#f4e9dc';g.font='10px Silkscreen, monospace';g.textBaseline='middle';g.fillText('HONGDAE',9,17);});
+  plane(60,5,M(0xffffff,{map:sidewalkT}),0,0,-3.5,-Math.PI/2);
+  plane(60,6.5,M(0xffffff,{map:asphaltT}),0,0,2.25,-Math.PI/2);
+  plane(60,4,M(0xffffff,{map:sidewalkT}),0,0,7.5,-Math.PI/2);
+  box(60,.12,.2,M(0x6a6670),0,.06,-1); box(60,.12,.2,M(0x6a6670),0,.06,5.5);
+  for(let x=-29;x<30;x+=3) box(1.4,.01,.12,B(0xd8c890),x,.01,2.25);
+  for(let k=-4;k<=4;k++) box(.35,.01,5.8,B(0xd8d4cc),k*.6,.012,2.25);
+  const P=PLAZA_X;
+  plane(5.6,5,M(0xffffff,{map:plazaT}),P,.01,-3.5,-Math.PI/2);
+  box(5.4,3,.3,M(0xffffff,{map:muralT}),P,1.5,-6.3);
+  box(2.4,.24,1.5,M(0x2a1e24),P,.12,-4.9);
+  cyl(.015,1.5,M(0x55555f),P,.99,-4.6); cyl(.035,.13,M(0x9a9aa4),P,1.8,-4.6); box(.5,.45,.35,M(0x1c1418),P+.8,.47,-5.2);
+  [[-1.9,-1.8],[1.9,-1.8]].forEach(([x,z])=>{box(1.3,.08,.45,M(0x6a4a30),P+x,.45,z);box(.08,.42,.4,M(0x2a2a2e),P+x-.55,.21,z);box(.08,.42,.4,M(0x2a2a2e),P+x+.55,.21,z);});
+  [[-2.4,-5.4],[2.4,-5.4]].forEach(([x,z])=>{cyl(.12,1.6,M(0x4a3020),P+x,.8,z);box(1.3,.9,1.3,M(0x1f4a30),P+x,2.0,z);box(.9,.6,.9,M(0x2a5e3a),P+x,2.7,z);});
+  [-5.7,5.7,-12.85,12.85,-18.8,18.8].forEach(x=>{cyl(.06,3.6,M(0x2a2a30),x,1.8,-1.5);box(.7,.06,.06,M(0x2a2a30),x+.3,3.55,-1.5);box(.3,.12,.22,B(0xffe3a0),x+.6,3.5,-1.5);});
+  streetScene.add(new THREE.HemisphereLight(0x6a6ab0,0x241a22,.95), new THREE.AmbientLight(0x2a2440,.5));
+  [-5.7,5.7].forEach(x=>{const l=new THREE.PointLight(0xffd9a0,1.2,11,1.6);l.position.set(x+.6,3.3,-1.2);streetScene.add(l);});
+  const devL=new THREE.PointLight(0xffe3a0,1.0,9,1.6); devL.position.set(0,4.4,-3.6); streetScene.add(devL);
+  const pl=new THREE.PointLight(0xff5fa8,.9,9,1.6); pl.position.set(P,3,-3); streetScene.add(pl);
+  for(let i=0;i<SLOTS.length;i++) buildSlot(i);
+  T=clubScene;}
+
+/* ---------- applying a club's look ---------- */
+let cur='club', curClub=null, scene=clubScene;
+const BOUNDS={club:{x0:-6.4,x1:6.4,z0:-2.15,z1:5.4},street:{x0:-25,x1:24,z0:-4.1,z1:4.8}};
+const baseCol=new THREE.Color(), tmpCol=new THREE.Color(), WHITE=new THREE.Color(0xffffff);
+const posterCache={};
+function inkFor(hex){const c=new THREE.Color(hex);const L=.2126*c.r+.7152*c.g+.0722*c.b;return L>.42?'#12080c':'#ffffff';}
+function imgTexture(url){if(posterCache[url])return posterCache[url];
+  const img=new Image();const t=new THREE.Texture(img);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.NearestFilter;img.onload=()=>{t.needsUpdate=true;};img.src=url;posterCache[url]=t;return t;}
+function applyLook(c){
+  baseCol.set(c.light);
+  edgeMat.color.copy(baseCol).multiplyScalar(.55); fillL.color.copy(baseCol).lerp(WHITE,.4);
+  backdrop.material.map=(c.backdrop==='photo'&&c.backdropImg)?imgTexture(c.backdropImg):(BACKDROPS[c.backdrop]||newsT); backdrop.material.needsUpdate=true;
+  posterMeshes.forEach((m,i)=>{const src=c.posters[i]; m.visible=!!src||(i===0&&!c.posters.length); m.material.map=src?imgTexture(src):posterT; m.material.needsUpdate=true;});
+  floorMesh.material.map=FLOORS[c.floor]||FLOORS.concrete; floorMesh.material.needsUpdate=true;
+  rugMesh.visible=c.rug!=='none'&&c.kit==='band'; if(RUGS[c.rug]){rugMesh.material.map=RUGS[c.rug];rugMesh.material.needsUpdate=true;}
+  sofaG.visible=c.props.sofa; tablesG.visible=c.props.tables; ballG.visible=c.props.ball;
+  bandG.visible=c.kit==='band'; acouG.visible=c.kit==='acoustic'; synthG.visible=c.kit==='synth';
+  stageG.position.x=c.layout==='corner'?-1.7:0;
+  guitarMat.color.set(c.colors.guitar); bassMat.color.set(c.colors.bass); drumMat.color.set(c.colors.drum);
+  haze.forEach(h=>h.visible=c.smoke); clubScene.fog.near=c.smoke?7:14; clubScene.fog.far=c.smoke?20:26;
+  const root=document.documentElement.style; root.setProperty('--led',c.light); root.setProperty('--led-soft','#'+baseCol.clone().lerp(WHITE,.45).getHexString()); root.setProperty('--led-ink',inkFor(c.light));
+  $('signLabel').textContent=c.dev?'B1 · LIVE CLUB · 24H':'B1 · LIVE CLUB';
+  $('signName').textContent=c.name; $('signSub').textContent=c.intro||(c.owner+' 님의 클럽');
+  const tg=$('signTags'); tg.innerHTML=''; (c.tags||[]).forEach(t=>{const s=document.createElement('span');s.className='chip';s.textContent='#'+t;tg.appendChild(s);});
+  const f=c.set[c.feature]; $('signFeat').textContent=f?'대표곡 · '+f.t:'';
+}
+function streetLook(){const root=document.documentElement.style;root.setProperty('--led','#ffd23a');root.setProperty('--led-soft','#ffe58a');root.setProperty('--led-ink','#12080c');
+  $('signLabel').textContent='STREET'; $('signName').textContent='HONGDAE'; $('signSub').textContent='클럽 계단 앞으로 가면 들어갈 수 있어요'; $('signTags').innerHTML=''; $('signFeat').textContent='';}
+
+/* ---------- scene switching ---------- */
+function enterClub(c){
+  clubGhosts.forEach(dropGhost); clubGhosts=[];
+  cur='club'; curClub=c; scene=clubScene;
+  clubScene.add(me.s,me.sh,me.crown); me.crown.visible=(c===myClub);
+  me.pos.set(0,0,4.6); me.target=null;
+  if(c!==myClub&&c.ownerHere) clubGhosts.push(makeGhost(clubScene,c.owner,-1.5+rnd()*3,.6+rnd()*2,{owner:true}));
+  if(SAMPLES) POOL.slice().sort(()=>rnd()-.5).slice(0,2+(rnd()*2|0)).forEach(n=>clubGhosts.push(makeGhost(clubScene,n,-4.5+rnd()*9,-1+rnd()*4)));
+  streetGhosts.forEach(g=>{g.tag.style.display='none';if(g.bubble){g.bubble.remove();g.bubble=null;}});
+  applyLook(c); renderPL(); renderChat(); setHud(); snapCam(); showHint();
+  if(c.welcome) toast(c.welcome);
+}
+function goStreet(near){
+  clubGhosts.forEach(dropGhost); clubGhosts=[];
+  cur='street'; scene=streetScene; streetScene.add(me.s,me.sh,me.crown); me.crown.visible=false;
+  if(near) me.pos.set(near.x,0,near.z+1.3); else me.pos.set(0,0,1);
+  me.target=null; curClub=null; streetLook(); setHud(); snapCam(); showHint();
+}
+let nearDoor=null;
+function setHud(){
+  const inClub=cur==='club';
+  ['np','pl','chat'].forEach(id=>$(id).hidden=!inClub);
+  $('sayBox').hidden=inClub;
+  $('exitBtn').hidden=!inClub; $('setBtn').hidden=!(inClub&&curClub===myClub); $('logoutBtn').hidden=inClub||!authed;
+  $('enter').hidden=true; nearDoor=null;
+  if(inClub&&innerWidth<=720) $('chat').classList.add('closed');
+  syncChatToggle();
+}
+function go(fn){ if(reduce){fn();return;} $('fade').style.opacity=1; setTimeout(()=>{fn();$('fade').style.opacity=0;},260); }
+
+/* ---------- input: tap / click to move ---------- */
+const ray=new THREE.Raycaster(), ndc=new THREE.Vector2(), floorPlane=new THREE.Plane(new THREE.Vector3(0,1,0),0), hit=new THREE.Vector3();
+const markerMat=new THREE.MeshBasicMaterial({color:0xffd23a,transparent:true,opacity:0,depthWrite:false});
+const marker=new THREE.Mesh(new THREE.PlaneGeometry(.35,.35),markerMat); marker.rotation.x=-Math.PI/2;
+canvas.addEventListener('pointerdown',e=>{
+  const r=canvas.getBoundingClientRect(); ndc.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(ndc,camera); if(!ray.ray.intersectPlane(floorPlane,hit))return;
+  const b=BOUNDS[cur]; hit.x=Math.max(b.x0,Math.min(b.x1,hit.x)); hit.z=Math.max(b.z0,Math.min(b.z1,hit.z));
+  me.target=hit.clone(); scene.add(marker); marker.position.set(hit.x,.03,hit.z); markerMat.opacity=.9; dismissHint();
+  if(document.activeElement&&document.activeElement.tagName==='INPUT')document.activeElement.blur();
+});
+
+/* ---------- HUD: hint, toast, chat, street bubbles ---------- */
+const hint=$('hint'); let hintTimer, streetHintShown=false, clubHintShown=false;
+function showHint(){const verb=isTouch?'터치':'클릭';
+  if(cur==='club'){if(clubHintShown)return;clubHintShown=true;hint.innerHTML='가고 싶은 곳을 <b>'+verb+'</b>하면 유령이 이동해요';}
+  else{if(streetHintShown)return;streetHintShown=true;hint.innerHTML='클럽 <b>계단 앞</b>으로 가면 들어갈 수 있어요';}
+  hint.classList.remove('gone');clearTimeout(hintTimer);hintTimer=setTimeout(dismissHint,6500);}
+function dismissHint(){hint.classList.add('gone');clearTimeout(hintTimer);}
+let toastT; function toast(t){$('toast').textContent=t;$('toast').style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>$('toast').style.opacity=0,2800);}
+const log=$('log');
+function seedChat(c){
+  const first=c.welcome?[{sys:c.welcome}]:[];
+  if(!SAMPLES) return first.concat([{sys:c.owner+' 님의 클럽이에요.'}]);
+  if(c===myClub) return first.concat([{sys:ME_NAME+' 님이 클럽 주인이에요. 왕관이 보이면 주인이 와 있는 거예요.'},{who:'minjae',text:'이 곡 기타 톤 진짜 좋다'},{who:'lowfi.k',text:'과제하면서 틀어놓는 중'}]);
+  return first.concat([{sys:c.owner+' 님의 클럽이에요.'+(c.ownerHere?' 지금 주인이 와 있어요.':'')},{who:POOL[rnd()*POOL.length|0],text:'오늘 처음 와봐요'}]);}
+function renderChat(){log.innerHTML='';const k=curClub.id;if(!chats[k])chats[k]=seedChat(curClub);chats[k].forEach(drawMsg);log.scrollTop=log.scrollHeight;}
+function drawMsg(m){const d=document.createElement('div');
+  if(m.sys){d.className='msg sys';d.textContent=m.sys;}
+  else{d.className='msg';const w=document.createElement('span');w.className='who'+(m.me?' me':'');w.textContent=m.who;d.append(w,document.createTextNode(m.text));}
+  log.appendChild(d);log.scrollTop=log.scrollHeight;}
+function say(gh,text){if(gh.bubble)gh.bubble.remove();const b=document.createElement('div');b.className='bubble';b.textContent=text;tagsEl.appendChild(b);gh.bubble=b;gh.bubbleUntil=performance.now()+4500;}
+$('chatForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('chatInput');const t=inp.value.trim();if(!t||!curClub)return;
+  const m={who:ME_NAME,text:t,me:true};chats[curClub.id].push(m);drawMsg(m);say(me,t);inp.value='';});
+$('sayForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('sayInput');const t=inp.value.trim();if(!t)return;say(me,t);inp.value='';});
+const chat=$('chat');
+function syncChatToggle(){$('chatToggle').hidden=!(cur==='club'&&innerWidth<=720&&chat.classList.contains('closed'));}
+$('chatClose').addEventListener('click',()=>{
+  if(innerWidth<=720) chat.classList.add('closed');
+  else{log.hidden=!log.hidden;$('chatForm').hidden=log.hidden;$('chatClose').textContent=log.hidden?'펼치기':'접기';}
+  syncChatToggle();});
+$('chatToggle').addEventListener('click',()=>{chat.classList.remove('closed');syncChatToggle();});
+
+/* ---------- playlist: loops in order (or a daily shuffle), synced to the real clock ---------- */
+const mmss=s=>String(s/60|0).padStart(2,'0')+':'+String(s%60|0).padStart(2,'0');
+function playOrder(c){const idx=c.set.map((_,i)=>i); if(!c.shuffle) return idx;
+  let s=Math.floor(Date.now()/86400000)*7919+c.id.length*131; const r=()=>(s=(s*16807+11)%2147483647)/2147483647;
+  for(let i=idx.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[idx[i],idx[j]]=[idx[j],idx[i]];} return idx;}
+let rowEls=[], curIdx=-1;
+function renderPL(){
+  const c=curClub; const box=$('plRows'); box.innerHTML=''; curIdx=-1; if(!c)return;
+  $('plLabel').textContent=c.shuffle?'PLAYLIST · 셔플':'PLAYLIST';
+  rowEls=c.set.map((s,i)=>{const r=document.createElement('div');r.className='row';
+    r.innerHTML='<span class="n">'+String(i+1).padStart(2,'0')+'</span><span class="s"></span>';r.querySelector('.s').textContent=s.t+' · '+s.b;box.appendChild(r);return r;});
+  if(!c.set.length){const r=document.createElement('div');r.className='row';r.textContent=c===myClub?'클럽 설정에서 곡을 추가해 보세요':'아직 공연 준비 중이에요';box.appendChild(r);}
+  tick();}
+function tick(){
+  if(cur!=='club'||!curClub)return; const set=curClub.set;
+  if(!set.length){$('npLabel').textContent='NOW PLAYING';$('npTitle').textContent='조용한 밤';$('npBand').textContent='플레이리스트가 비어 있어요';$('tcur').textContent='00:00';$('tend').textContent='00:00';$('prog').style.width='0%';return;}
+  const order=playOrder(curClub); const total=set.reduce((a,s)=>a+s.d,0);
+  let p=(Date.now()/1000)%total, k=0; while(p>=set[order[k]].d){p-=set[order[k]].d;k++;} const i=order[k];
+  if(i!==curIdx){curIdx=i;$('npTitle').textContent=set[i].t;$('npBand').textContent=set[i].b;
+    $('npLabel').textContent='NOW PLAYING · '+(k+1)+'/'+set.length; $('tend').textContent=mmss(set[i].d);
+    rowEls.forEach((r,j)=>r.classList.toggle('on',j===i)); if(rowEls[i]) rowEls[i].scrollIntoView({block:'nearest'});}
+  $('tcur').textContent=mmss(p); $('prog').style.width=(p/set[i].d*100)+'%';}
+setInterval(tick,1000);
+
+/* ---------- doors ---------- */
+$('enter').addEventListener('click',()=>{if(!nearDoor)return;if(nearDoor.create){openNew();return;}const c=nearDoor.club;go(()=>enterClub(c));});
+$('exitBtn').addEventListener('click',()=>{const slot=curClub===myClub?MY_SLOT:curClub.slot;go(()=>goStreet(doors[slot]));});
+
+/* ---------- settings sheet ---------- */
+const setModal=$('setModal'), newModal=$('newModal'); let lastFocus;
+function openModal(m,focusSel){lastFocus=document.activeElement;m.hidden=false;setTimeout(()=>{const f=m.querySelector(focusSel);f&&f.focus();},30);}
+function closeModal(m){m.hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal'))));
+[setModal,newModal].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
+addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal].forEach(m=>{if(!m.hidden)closeModal(m);});});
+function showTab(name){document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));
+  document.querySelectorAll('#setModal [data-pane]').forEach(p=>p.hidden=p.dataset.pane!==name);}
+document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+function seg(el,labels,curVal,onPick){el.innerHTML='';Object.keys(labels).forEach(k=>{const b=document.createElement('button');b.type='button';b.textContent=labels[k];b.setAttribute('aria-pressed',String(k===curVal));
+  b.addEventListener('click',()=>{[...el.children].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));onPick(k);});el.appendChild(b);});}
+function swatches(el,curVal,onPick){el.innerHTML='';
+  LIGHTS.forEach(c=>{const b=document.createElement('button');b.type='button';b.style.background=c;b.setAttribute('aria-label','조명 '+c);b.setAttribute('aria-pressed',String(c===curVal));
+    b.addEventListener('click',()=>{[...el.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed',String(x===b)));onPick(c);});el.appendChild(b);});
+  const ci=document.createElement('input');ci.type='color';ci.value=LIGHTS.includes(curVal)?'#ff3050':curVal;ci.setAttribute('aria-label','조명 색 직접 고르기');
+  ci.addEventListener('input',()=>{[...el.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed','false'));onPick(ci.value);});el.appendChild(ci);}
+function commit(signToo){saveMine();if(curClub===myClub)applyLook(myClub);if(signToo)refreshMySign();}
+function fillSettings(){
+  const c=myClub;
+  seg($('oBack'),BACK_LABELS,c.backdrop,pickBack); renderBackThumb(); renderPosterSlots(); $('nameErr').textContent='';
+  seg($('oFloor'),FLOOR_LABELS,c.floor,v=>{c.floor=v;commit();});
+  seg($('oRug'),RUG_LABELS,c.rug,v=>{c.rug=v;commit();});
+  $('pSofa').checked=c.props.sofa; $('pTables').checked=c.props.tables; $('pBall').checked=c.props.ball;
+  seg($('oKit'),KIT_LABELS,c.kit,v=>{c.kit=v;commit();});
+  seg($('oLayout'),LAYOUT_LABELS,c.layout,v=>{c.layout=v;commit();});
+  $('cGuitar').value=c.colors.guitar; $('cBass').value=c.colors.bass; $('cDrum').value=c.colors.drum;
+  swatches($('oLights'),c.light,v=>{c.light=v;commit(true);});
+  seg($('oPattern'),PATTERN_LABELS,c.pattern,v=>{c.pattern=v;commit();});
+  $('oSmoke').checked=c.smoke;
+  $('fName').value=c.name; $('fIntro').value=c.intro||''; $('fTags').value=(c.tags||[]).join(', '); $('fWelcome').value=c.welcome||''; $('fNeon').value=c.neon||'';
+  fillFeature();
+  seg($('oFont'),FONT_LABELS,c.signFont,v=>{c.signFont=v;commit(true);});
+  $('oSignSame').checked=!c.signColor; $('oSignColor').value=c.signColor||c.light; $('oSignColor').disabled=!c.signColor;
+  $('oShuffle').checked=c.shuffle;
+  $('delName').textContent=c.name; $('fDel').value=''; $('delBtn').disabled=true;
+  renderTList();}
+function fillFeature(){const s=$('fFeature');s.innerHTML='';const o=document.createElement('option');o.value='-1';o.textContent='없음';s.appendChild(o);
+  myClub.set.forEach((x,i)=>{const op=document.createElement('option');op.value=String(i);op.textContent=x.t+' · '+x.b;s.appendChild(op);});
+  s.value=String(myClub.feature<myClub.set.length?myClub.feature:-1);}
+$('setBtn').addEventListener('click',()=>{fillSettings();showTab('space');openModal(setModal,'[data-tab="space"]');});
+[['pSofa','sofa'],['pTables','tables'],['pBall','ball']].forEach(([id,k])=>$(id).addEventListener('change',e=>{myClub.props[k]=e.target.checked;commit();}));
+[['cGuitar','guitar'],['cBass','bass'],['cDrum','drum']].forEach(([id,k])=>$(id).addEventListener('input',e=>{myClub.colors[k]=e.target.value;commit();}));
+$('oSmoke').addEventListener('change',e=>{myClub.smoke=e.target.checked;commit();});
+$('fName').addEventListener('input',e=>{const v=e.target.value.trim();if(!v){$('nameErr').textContent='클럽 이름은 꼭 있어야 해요. 비워두면 이전 이름이 유지돼요.';return;}
+  $('nameErr').textContent='';myClub.name=v;$('delName').textContent=v;commit(true);});
+$('fName').addEventListener('blur',e=>{if(!e.target.value.trim()){e.target.value=myClub.name;$('nameErr').textContent='';}});
+$('fIntro').addEventListener('input',e=>{myClub.intro=e.target.value.trim();commit();});
+$('fTags').addEventListener('input',e=>{myClub.tags=e.target.value.split(',').map(s=>s.trim()).filter(Boolean).slice(0,3);commit();});
+$('fWelcome').addEventListener('input',e=>{myClub.welcome=e.target.value.trim();saveMine();});
+$('fNeon').addEventListener('input',e=>{myClub.neon=e.target.value.trim();commit(true);});
+$('fFeature').addEventListener('change',e=>{myClub.feature=+e.target.value;commit();});
+$('oSignSame').addEventListener('change',e=>{myClub.signColor=e.target.checked?null:$('oSignColor').value;$('oSignColor').disabled=e.target.checked;commit(true);});
+$('oSignColor').addEventListener('input',e=>{if(!$('oSignSame').checked){myClub.signColor=e.target.value;commit(true);}});
+$('oShuffle').addEventListener('change',e=>{myClub.shuffle=e.target.checked;saveMine();renderPL();});
+// images are shrunk to a few dozen pixels: they read as pixel art and stay tiny in storage
+function shrinkImage(file,W,H,cb){
+  if(!file||!file.type.startsWith('image/')){toast('이미지 파일만 올릴 수 있어요');return;}
+  const rd=new FileReader();rd.onload=()=>{const img=new Image();img.onload=()=>{const c=document.createElement('canvas');c.width=W;c.height=H;const g=c.getContext('2d');
+    const s=Math.max(W/img.width,H/img.height),w=img.width*s,h=img.height*s;g.drawImage(img,(W-w)/2,(H-h)/2,w,h);cb(c.toDataURL('image/png'));};
+    img.onerror=()=>toast('이 이미지는 열 수 없어요');img.src=rd.result;};rd.readAsDataURL(file);}
+let posterSlot=0;
+function renderPosterSlots(){const box=$('posterSlots');box.innerHTML='';
+  for(let i=0;i<5;i++){const src=myClub.posters[i];const d=document.createElement('div');d.className='pslot';
+    const th=document.createElement('div');th.className='thumb'+(src?' has':'');th.textContent=src?'':(i+1)+'번 · '+(i<3?'오른쪽 벽':'왼쪽 벽');if(src)th.style.backgroundImage='url('+src+')';
+    const add=document.createElement('button');add.type='button';add.className='btn alt';add.textContent=src?'바꾸기':'올리기';
+    add.disabled=!src&&i>myClub.posters.length; add.addEventListener('click',()=>{posterSlot=i;$('oPoster').click();});
+    d.append(th,add);
+    if(src){const del=document.createElement('button');del.type='button';del.className='btn alt';del.textContent='빼기';
+      del.addEventListener('click',()=>{myClub.posters.splice(i,1);commit();renderPosterSlots();});d.appendChild(del);}
+    box.appendChild(d);}}
+$('oPoster').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  shrinkImage(f,36,48,url=>{const a=myClub.posters;if(posterSlot<a.length)a[posterSlot]=url;else if(a.length<5)a.push(url);commit();renderPosterSlots();toast('포스터를 붙였어요');});});
+function renderBackThumb(){const th=$('backThumb'),src=myClub.backdropImg;th.className='bthumb'+(src?' has':'');th.textContent=src?'':'사진 없음';th.style.backgroundImage=src?'url('+src+')':'';$('oBackImgDel').disabled=!src;}
+$('oBackImg').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];e.target.value='';if(!f)return;
+  shrinkImage(f,112,72,url=>{myClub.backdropImg=url;myClub.backdrop='photo';commit();renderBackThumb();
+    seg($('oBack'),BACK_LABELS,'photo',pickBack);toast('뒷벽 사진을 붙였어요');});});
+$('oBackImgDel').addEventListener('click',()=>{myClub.backdropImg=null;if(myClub.backdrop==='photo')myClub.backdrop='collage';commit();renderBackThumb();seg($('oBack'),BACK_LABELS,myClub.backdrop,pickBack);});
+function pickBack(v){if(v==='photo'&&!myClub.backdropImg){$('oBackImg').click();seg($('oBack'),BACK_LABELS,myClub.backdrop,pickBack);return;}myClub.backdrop=v;commit();}
+function renderTList(){const ul=$('tList');ul.innerHTML='';
+  if(!myClub.set.length){const li=document.createElement('li');li.innerHTML='<span class="help">아직 곡이 없어요. 아래에서 추가해 주세요.</span>';ul.appendChild(li);return;}
+  myClub.set.forEach((s,i)=>{const li=document.createElement('li');
+    li.innerHTML='<div class="meta"><span class="t"></span><span class="a"></span><span class="yt"></span></div>';
+    li.querySelector('.t').textContent=(i+1)+'. '+s.t; li.querySelector('.a').textContent=s.b+' · '+(s.auto?'길이 자동 계산':mmss(s.d));
+    const yt=li.querySelector('.yt'); yt.textContent=s.u?'YOUTUBE 연결됨':'링크 없음'; if(!s.u)yt.classList.add('no');
+    [['↑','위로',-1],['↓','아래로',1],['×','삭제',0]].forEach(([sym,lab,dir])=>{const b=document.createElement('button');b.type='button';b.className='mini';b.textContent=sym;b.setAttribute('aria-label',s.t+' '+lab);
+      b.disabled=(dir===-1&&i===0)||(dir===1&&i===myClub.set.length-1);
+      b.addEventListener('click',()=>{const a=myClub.set,f=a[myClub.feature];
+        if(dir===0)a.splice(i,1);else{const j=i+dir;[a[i],a[j]]=[a[j],a[i]];}
+        myClub.feature=f?a.indexOf(f):-1; commit(); renderTList(); renderPL(); fillFeature();});li.appendChild(b);});
+    ul.appendChild(li);});}
+$('addForm').addEventListener('submit',e=>{e.preventDefault();
+  const t=$('aTitle').value.trim(),b=$('aArtist').value.trim(),u=$('aUrl').value.trim(),err=$('addErr');
+  if(!t||!b){err.textContent='곡 제목과 아티스트를 입력해 주세요.';return;}
+  if(!u){err.textContent='유튜브 링크를 넣어주세요. 곡 길이를 이 링크에서 계산해요.';return;}
+  if(!/^https?:\/\/(www\.|m\.|music\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{6,}/.test(u)){err.textContent='유튜브 영상 링크 형식이 아니에요. youtube.com/watch?v=… 또는 youtu.be/… 링크를 넣어주세요.';return;}
+  // the real site asks the YouTube player for the length here; this preview can't reach YouTube, so it holds 3:30
+  myClub.set.push({t,b,u,d:210,auto:true});saveMine();err.textContent='';['aTitle','aArtist','aUrl'].forEach(id=>$(id).value='');
+  renderTList();renderPL();fillFeature();toast('플레이리스트에 추가했어요');});
+$('fDel').addEventListener('input',()=>{$('delBtn').disabled=$('fDel').value.trim()!==myClub.name;});
+$('delForm').addEventListener('submit',e=>{e.preventDefault();if($('fDel').value.trim()!==myClub.name)return;
+  delete chats[myClub.id]; myClub=null; saveMine(); closeModal(setModal); buildSlot(MY_SLOT);
+  go(()=>{goStreet(doors[MY_SLOT]);toast('클럽을 삭제했어요. 빈 공간에서 새로 만들 수 있어요');});});
+
+/* ---------- create club ---------- */
+let newLight=LIGHTS[0];
+function openNew(){$('nName').value='';$('newErr').textContent='';newLight=LIGHTS[0];swatches($('nLights'),newLight,c=>newLight=c);openModal(newModal,'#nName');}
+$('newForm').addEventListener('submit',e=>{e.preventDefault();const n=$('nName').value.trim();
+  if(!n){$('newErr').textContent='클럽 이름을 입력해 주세요.';return;}
+  myClub=norm({id:'mine',name:n,owner:ME_NAME,light:newLight,dev:isDev});saveMine();
+  closeModal(newModal); buildSlot(MY_SLOT); go(()=>{enterClub(myClub);toast('클럽을 만들었어요. 클럽 설정에서 꾸며보세요');});});
+
+/* ---------- loop ---------- */
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(Math.max(1,Math.floor(w/PX)),Math.max(1,Math.floor(h/PX)),false);camera.aspect=w/h;camera.updateProjectionMatrix();syncChatToggle();}
+addEventListener('resize',resize); resize();
+const camPos=new THREE.Vector3(), look=new THREE.Vector3(), tmp=new THREE.Vector3(), camGoal=new THREE.Vector3();
+function camTarget(){const far=camera.aspect<1?1.55:1, kx=cur==='club'?.75:1;
+  camGoal.set(me.pos.x*kx,5.4*far,me.pos.z+7.6*far); look.set(me.pos.x*(cur==='club'?.85:1),.9,me.pos.z-2.2);}
+function snapCam(){camTarget();camPos.copy(camGoal);}
+let last=performance.now();
+function step(now){
+  const dt=Math.min(.05,(now-last)/1000); last=now; const t=now/1000; const b=BOUNDS[cur];
+  if(me.target){tmp.subVectors(me.target,me.pos);tmp.y=0;const d=tmp.length();
+    if(d<.08)me.target=null;else{me.pos.addScaledVector(tmp,Math.min(d,3.4*dt)/d);if(Math.abs(tmp.x)>.15)me.s.scale.x=tmp.x<0?-1:1;}}
+  me.pos.x=Math.max(b.x0,Math.min(b.x1,me.pos.x)); me.pos.z=Math.max(b.z0,Math.min(b.z1,me.pos.z));
+  markerMat.opacity=Math.max(0,markerMat.opacity-dt*.8);
+  const list=cur==='club'?clubGhosts:streetGhosts;
+  list.forEach(g=>{g.next-=dt;
+    if(g.next<=0){g.next=3+rnd()*6;g.target=rnd()<.6?new THREE.Vector3(b.x0+1+rnd()*(b.x1-b.x0-2),0,b.z0+.5+rnd()*(b.z1-b.z0-1)):null;}
+    if(g.target){tmp.subVectors(g.target,g.pos);const d=tmp.length();if(d<.1)g.target=null;else{g.pos.addScaledVector(tmp,Math.min(d,1.3*dt)/d);if(Math.abs(tmp.x)>.1)g.s.scale.x=tmp.x<0?-1:1;}}});
+  const W=innerWidth,H=innerHeight;
+  list.concat([me]).forEach(g=>{
+    const bob=reduce?0:Math.sin(t*1.3+g.phase)*.04;
+    g.s.position.set(g.pos.x,.72+bob,g.pos.z); g.sh.position.set(g.pos.x,.02,g.pos.z); g.crown.position.set(g.pos.x,1.42+bob,g.pos.z);
+    tmp.set(g.pos.x,(g.crown.visible?1.68:1.4)+bob,g.pos.z).project(camera);
+    const vis=tmp.z<1, sx=(tmp.x*.5+.5)*W, sy=(-tmp.y*.5+.5)*H;
+    g.tag.style.display=vis?'':'none'; g.tag.style.left=sx+'px'; g.tag.style.top=sy+'px';
+    if(g.bubble){if(now>g.bubbleUntil){g.bubble.remove();g.bubble=null;}else{g.bubble.style.left=sx+'px';g.bubble.style.top=(sy-26)+'px';}}});
+  if(cur==='street'){
+    let best=null,bd=1.7; doors.forEach(d=>{if(!d)return;const dd=Math.hypot(d.x-me.pos.x,(d.z-me.pos.z)*.8);if(dd<bd){bd=dd;best=d;}});
+    if(best!==nearDoor){nearDoor=best;const e=$('enter');if(best){e.textContent=best.create?'빈 공간 · 내 클럽 만들기':best.club.name+' 입장하기';e.hidden=false;}else e.hidden=true;}
+  } else if(curClub){
+    const p=reduce?'steady':curClub.pattern; tmpCol.copy(baseCol);
+    if(p==='shift') tmpCol.offsetHSL(Math.sin(t*.25)*.12,0,0);
+    let k=1; if(p==='pulse'){const beat=Math.pow(Math.max(0,Math.sin(t*Math.PI*4)),6);k=.6+beat*.8;}
+    ledMat.color.copy(tmpCol).multiplyScalar(Math.min(1,.55+.45*k)); red1.color.copy(tmpCol); red1.intensity=2.1*k; red2.color.copy(tmpCol).offsetHSL(.03,0,0);
+    hazeMat.color.copy(tmpCol);
+    if(curClub.smoke&&!reduce) haze.forEach(h=>{h.position.x+=Math.sin(t*.2+h.userData.p)*dt*.15;});
+    if(curClub.props.ball&&!reduce) ball.rotation.y+=dt*.6;
+  }
+  camTarget(); camPos.lerp(camGoal,1-Math.pow(.02,dt)); camera.position.copy(camPos); camera.lookAt(look);
+  renderer.render(scene,camera);
+  requestAnimationFrame(step);
+}
+
+/* ---------- boot (wait briefly for fonts so street signs use them) ---------- */
+const fontsReady=(document.fonts&&document.fonts.load)?Promise.all(['18px Silkscreen','18px "Do Hyeon"','18px "Black Han Sans"','18px Dokdo'].map(f=>document.fonts.load(f))).catch(()=>{}):Promise.resolve();
+Promise.race([fontsReady,new Promise(r=>setTimeout(r,1500))]).then(()=>{
+  buildStreet();
+  if(SAMPLES) ['haneul','yuna.k','dohyun','mint_b','noodle'].forEach((n,i)=>streetGhosts.push(makeGhost(streetScene,n,-20+i*9,-1+rnd()*4)));
+  streetGhosts.forEach(g=>g.tag.style.display='none');
+  goStreet(null);              // the site always opens on the street
+  requestAnimationFrame(step);
+  startAuth();
+});
+
+/* ---------- sign in / sign up (Supabase Auth; demo mode until config.js has keys) ---------- */
+const sb=(CFG.SUPABASE_URL&&CFG.SUPABASE_KEY&&window.supabase)?window.supabase.createClient(CFG.SUPABASE_URL,CFG.SUPABASE_KEY):null;
+let authed=false, pendingEmail='';
+const NAME_RE=/^[A-Za-z0-9._]{2,12}$/;
+const userName=u=>(u.user_metadata&&u.user_metadata.username)||u.email.split('@')[0];
+function authTab(t){document.querySelectorAll('[data-auth]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.auth===t)));
+  document.querySelectorAll('[data-authpane]').forEach(p=>p.hidden=p.dataset.authpane!==t);}
+document.querySelectorAll('[data-auth]').forEach(b=>b.addEventListener('click',()=>authTab(b.dataset.auth)));
+function busy(btn,on,label){btn.disabled=on;if(label)btn.textContent=label;}
+function signedIn(name,id){
+  authed=true; ME_NAME=name; ME_ID=id; isDev=!!CFG.DEV_USERNAME&&name.toLowerCase()===CFG.DEV_USERNAME.toLowerCase(); MY_SLOT=isDev?2:5;
+  me.name=name; me.tag.textContent=name;
+  loadMine(); for(let i=0;i<SLOTS.length;i++) buildSlot(i);
+  $('auth').hidden=true; streetHintShown=false; goStreet(null);
+  toast(myClub?name+' 님, 어서 오세요':name+' 님, 어서 오세요. 거리 끝 빈 공간에서 내 클럽을 만들 수 있어요');
+}
+async function startAuth(){
+  if(!sb){ $('authLive').hidden=true; $('demoForm').hidden=false;
+    let saved=null; try{saved=localStorage.getItem('cs.demoName');}catch(e){}
+    if(saved){signedIn(saved,'demo-'+saved);return;}
+    setTimeout(()=>$('dName').focus(),50); return; }
+  try{const {data}=await sb.auth.getSession(); if(data&&data.session){const u=data.session.user;signedIn(userName(u),u.id);return;}}catch(e){}
+  setTimeout(()=>$('lEmail').focus(),50);
+}
+$('demoForm').addEventListener('submit',e=>{e.preventDefault();const n=$('dName').value.trim();
+  if(!NAME_RE.test(n)){$('demoErr').textContent='영문, 숫자, 점(.), 밑줄(_)로 2~12자를 써주세요.';return;}
+  try{localStorage.setItem('cs.demoName',n);}catch(e){} signedIn(n,'demo-'+n);});
+$('loginForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('loginErr'),btn=$('loginBtn');err.textContent='';
+  busy(btn,true,'확인 중…');
+  const {data,error}=await sb.auth.signInWithPassword({email:$('lEmail').value.trim(),password:$('lPw').value});
+  busy(btn,false,'로그인');
+  if(error){const m=error.message||'';
+    err.textContent=/invalid login/i.test(m)?'이메일 또는 비밀번호가 맞지 않아요.'
+      :/not confirmed/i.test(m)?'아직 이메일 인증이 끝나지 않았어요. 회원가입에서 인증번호를 입력해 주세요.'
+      :'로그인하지 못했어요. ('+m+')';return;}
+  signedIn(userName(data.user),data.user.id);});
+$('signupForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('signupErr'),btn=$('signupBtn');err.textContent='';
+  const name=$('sName').value.trim(), email=$('sEmail').value.trim(), pw=$('sPw').value;
+  if(!NAME_RE.test(name)){err.textContent='아이디는 영문, 숫자, 점(.), 밑줄(_)로 2~12자예요.';return;}
+  if(pw.length<8){err.textContent='비밀번호는 8자 이상이어야 해요.';return;}
+  if(pw!==$('sPw2').value){err.textContent='비밀번호 확인이 일치하지 않아요.';return;}
+  busy(btn,true,'보내는 중…');
+  const {data,error}=await sb.auth.signUp({email,password:pw,options:{data:{username:name}}});
+  busy(btn,false,'인증번호 보내기');
+  if(error){const m=error.message||'';
+    err.textContent=/already/i.test(m)?'이미 가입된 이메일이에요. 로그인해 주세요.'
+      :/rate limit/i.test(m)?'인증 메일을 너무 자주 보냈어요. 잠시 후 다시 시도해 주세요.'
+      :'가입하지 못했어요. ('+m+')';return;}
+  if(data.session){signedIn(name,data.user.id);return;}   // email confirmation turned off
+  pendingEmail=email; $('codeSent').textContent=email+'로 인증번호를 보냈어요. 메일함과 스팸함을 확인해 주세요.';
+  authTab('code'); setTimeout(()=>$('cCode').focus(),50);});
+$('codeForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('codeErr'),btn=$('codeBtn');err.textContent='';
+  const token=$('cCode').value.trim(); if(!/^\d{6}$/.test(token)){err.textContent='숫자 6자리를 입력해 주세요.';return;}
+  busy(btn,true,'확인 중…');
+  const {data,error}=await sb.auth.verifyOtp({email:pendingEmail,token,type:'signup'});
+  busy(btn,false,'가입 완료');
+  if(error){err.textContent='인증번호가 맞지 않거나 시간이 지났어요. 다시 보내기를 눌러 주세요.';return;}
+  signedIn(userName(data.user),data.user.id);});
+$('resendBtn').addEventListener('click',async()=>{if(!pendingEmail)return;
+  const {error}=await sb.auth.resend({type:'signup',email:pendingEmail});
+  $('codeErr').textContent=error?'다시 보내지 못했어요. 잠시 후 시도해 주세요.':''; if(!error)toast('인증번호를 다시 보냈어요');});
+$('backBtn').addEventListener('click',()=>authTab('signup'));
+let rotateT;
+function rotateHint(){if(!isTouch||innerWidth>innerHeight)return;const r=$('rotate');r.classList.remove('gone');clearTimeout(rotateT);rotateT=setTimeout(()=>r.classList.add('gone'),4500);}
+rotateHint(); addEventListener('orientationchange',()=>setTimeout(rotateHint,300));
+$('logoutBtn').addEventListener('click',async()=>{
+  if(sb){try{await sb.auth.signOut();}catch(e){}} else {try{localStorage.removeItem('cs.demoName');}catch(e){}}
+  location.reload();});
+})();
+</script>
+
+</body>
+</html>
