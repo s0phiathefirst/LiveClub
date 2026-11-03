@@ -88,3 +88,34 @@ exception when unique_violation then return 'taken';
 end $$;
 revoke all on function public.change_nickname(text) from public;
 grant execute on function public.change_nickname(text) to authenticated;
+
+-- 7. guestbook: one per club. Anyone can read; signed-in people write as themselves;
+--    the writer or the club owner can delete. One entry per person every 30 seconds.
+create table if not exists public.guestbook (
+  id          bigint generated always as identity primary key,
+  club_owner  uuid not null references public.profiles(id) on delete cascade,
+  author      uuid not null default auth.uid() references public.profiles(id) on delete cascade,
+  message     text not null check (char_length(btrim(message)) between 1 and 200),
+  created_at  timestamptz not null default now()
+);
+create index if not exists guestbook_club_idx on public.guestbook (club_owner, created_at desc);
+alter table public.guestbook enable row level security;
+drop policy if exists "read guestbook" on public.guestbook;
+drop policy if exists "write own entry" on public.guestbook;
+drop policy if exists "delete own or on my club" on public.guestbook;
+create policy "read guestbook" on public.guestbook for select using (true);
+create policy "write own entry" on public.guestbook for insert to authenticated with check ((select auth.uid()) = author);
+create policy "delete own or on my club" on public.guestbook for delete to authenticated
+  using ((select auth.uid()) = author or (select auth.uid()) = club_owner);
+
+create or replace function public.guestbook_slow_down() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if exists (select 1 from public.guestbook where author = new.author and created_at > now() - interval '30 seconds') then
+    raise exception 'too_fast';
+  end if;
+  return new;
+end $$;
+drop trigger if exists guestbook_slow_down on public.guestbook;
+create trigger guestbook_slow_down before insert on public.guestbook
+  for each row execute function public.guestbook_slow_down();

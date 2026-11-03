@@ -29,6 +29,16 @@ html,body{height:100%;margin:0}
 .linkbtn{background:none;border:0;padding:0;color:var(--gold);font-size:14px;text-decoration:underline;cursor:pointer;font-family:var(--body)}
 .notice{padding:10px 12px;background:#1f1508;border:2px solid #5a4210;color:#f4d98a;font-size:14px;line-height:1.45}
 .ok{font-size:14px;color:#7ad9a0}
+/* guestbook: paper-like entries on the dark sheet */
+.gblist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.gbi{padding:10px 12px;background:#f4e9dc;color:#12080c;border:2px solid #000;box-shadow:3px 3px 0 #000}
+.gbi:nth-child(3n+2){transform:rotate(-.4deg)} .gbi:nth-child(3n){transform:rotate(.4deg)}
+.gbi .h{display:flex;gap:8px;align-items:baseline;font-size:13px;color:#6a5a50}
+.gbi .h b{font-size:15px;color:#12080c;font-weight:400}
+.gbi .h .del{margin-left:auto;background:none;border:0;color:#b3122a;font-family:var(--body);font-size:13px;cursor:pointer;min-height:28px}
+.gbi p{margin:4px 0 0;font-size:16px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere}
+textarea.inp{min-height:84px;padding:8px 10px;resize:vertical;line-height:1.45}
+.count{font-size:12px;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
 body{background:var(--ink);color:var(--paper);font-family:var(--body);overflow:hidden;-webkit-user-select:none;user-select:none}
 #app{position:fixed;inset:0}
 #view{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;touch-action:none;cursor:pointer;display:block}
@@ -214,6 +224,7 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
   <div id="bottomL" class="L Bt">
     <button class="btn" id="exitBtn" type="button">거리로 나가기 →</button>
     <button class="btn alt" id="setBtn" type="button">클럽 설정</button>
+    <button class="btn alt" id="gbBtn" type="button">방명록</button>
     <button class="btn alt" id="logoutBtn" type="button" hidden>로그아웃</button>
   </div>
 
@@ -326,6 +337,19 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
         <p class="help" style="font-size:15px;color:var(--paper)">클럽을 삭제하면 꾸미기, 플레이리스트, 채팅 기록이 모두 사라지고 되돌릴 수 없어요. 거리의 내 자리는 빈 공간이 돼요.</p>
         <div class="field"><label for="fDel">확인을 위해 클럽 이름 <b id="delName" style="color:var(--gold);font-weight:400"></b>을 입력하세요</label><input class="inp" id="fDel"></div>
         <button class="btn danger" type="submit" id="delBtn" disabled>클럽 삭제하기</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- guestbook -->
+  <div class="modal center" id="gbModal" hidden role="dialog" aria-modal="true" aria-labelledby="gbTitle">
+    <div class="sheet">
+      <header><div><h2 id="gbTitle">GUESTBOOK</h2><span class="help" id="gbClub"></span></div><button class="btn alt" type="button" data-close>닫기</button></header>
+      <form class="pane" id="gbForm" autocomplete="off">
+        <div class="field"><label for="gbText">한마디 남기기</label><textarea class="inp" id="gbText" maxlength="200" placeholder="오늘 들은 곡, 클럽 감상, 인사 한마디"></textarea><div class="count" id="gbCount">0 / 200</div></div>
+        <div class="err" id="gbErr"></div>
+        <button class="btn gold" type="submit" id="gbSend">남기기</button>
+        <ul class="gblist" id="gbList"></ul>
       </form>
     </div>
   </div>
@@ -592,6 +616,8 @@ cyl(.01,.5,stand,0,4.35,-.5);
 const ball=new THREE.Mesh(new THREE.SphereGeometry(.32,10,8),M(0xffffff,{map:ballT,emissive:0x333344})); ball.position.set(0,3.95,-.5); ballG.add(ball);
 T=clubScene;
 box(.3,4.6,.3,M(0x1c1216),-6.5,2.3,4.6); box(.3,4.6,.3,M(0x1c1216),6.5,2.3,4.6);
+// guestbook lectern by the door: an open book on a stand
+box(.5,.9,.4,M(0x2a1a14),4.6,.45,4.4); const gbBook=box(.62,.04,.44,M(0xf4e9dc),4.6,.94,4.32); gbBook.rotation.x=-.35; box(.02,.05,.44,M(0x8a6a4a),4.6,.95,4.32).rotation.x=-.35;
 
 // haze sprites
 const hazeMat=new THREE.SpriteMaterial({map:hazeT,transparent:true,opacity:.16,depthWrite:false,color:0xff3050});
@@ -849,6 +875,39 @@ function streetLook(){const root=document.documentElement.style;root.setProperty
   $('signLabel').textContent='STREET'; $('signName').textContent='HONGDAE'; $('signSub').textContent='클럽 계단 앞으로 가면 들어갈 수 있어요'; $('signTags').innerHTML=''; $('signFeat').textContent='';}
 
 /* ---------- scene switching ---------- */
+/* ---------- guestbook: one per club, newest first ---------- */
+const isUuid=v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(v||''));
+const kstStamp=iso=>{const d=new Date(new Date(iso).getTime()+9*3600e3).toISOString();return d.slice(0,10).replace(/-/g,'.')+' '+d.slice(11,16);};
+const gbLocalKey=()=>'cs.gb.'+curClub.id;
+function gbServer(){return sb&&isUuid(curClub&&curClub.id);}
+function drawGuestbook(rows){const ul=$('gbList');ul.innerHTML='';
+  if(!rows.length){const li=document.createElement('li');li.className='help';li.textContent='아직 방명록이 비어 있어요. 첫 한마디를 남겨보세요.';ul.appendChild(li);return;}
+  rows.forEach(r=>{const li=document.createElement('li');li.className='gbi';
+    li.innerHTML='<div class="h"><b></b><span></span></div><p></p>';
+    li.querySelector('b').textContent=r.nick; li.querySelector('.h span').textContent=kstStamp(r.at); li.querySelector('p').textContent=r.text;
+    if(r.mine||curClub===myClub){const d=document.createElement('button');d.type='button';d.className='del';d.textContent='지우기';d.setAttribute('aria-label',r.nick+'의 방명록 지우기');
+      d.addEventListener('click',()=>deleteEntry(r));li.querySelector('.h').appendChild(d);}
+    ul.appendChild(li);});}
+async function loadGuestbook(){
+  if(gbServer()){
+    const {data,error}=await sb.from('guestbook').select('id,message,created_at,author,profiles!guestbook_author_fkey(nickname)').eq('club_owner',curClub.id).order('created_at',{ascending:false}).limit(50);
+    if(error){$('gbErr').textContent='방명록을 불러오지 못했어요.';drawGuestbook([]);return;}
+    drawGuestbook((data||[]).map(r=>({id:r.id,text:r.message,at:r.created_at,nick:(r.profiles&&r.profiles.nickname)||'?',mine:r.author===ME_ID})));
+  } else { let rows=[]; try{rows=JSON.parse(localStorage.getItem(gbLocalKey())||'[]');}catch(e){} drawGuestbook(rows.map(r=>Object.assign({},r,{mine:r.by===ME_ID}))); }}
+async function deleteEntry(r){
+  if(gbServer()){const {error}=await sb.from('guestbook').delete().eq('id',r.id); if(error){toast('지우지 못했어요');return;}}
+  else {try{const rows=JSON.parse(localStorage.getItem(gbLocalKey())||'[]').filter(x=>x.id!==r.id);localStorage.setItem(gbLocalKey(),JSON.stringify(rows));}catch(e){}}
+  loadGuestbook();}
+$('gbBtn').addEventListener('click',()=>{if(!curClub)return;$('gbClub').textContent=curClub.name;$('gbErr').textContent='';$('gbText').value='';$('gbCount').textContent='0 / 200';
+  $('gbList').innerHTML='<li class="help">불러오는 중…</li>'; openModal($('gbModal'),'#gbText'); loadGuestbook();});
+$('gbText').addEventListener('input',e=>{$('gbCount').textContent=e.target.value.length+' / 200';});
+$('gbForm').addEventListener('submit',async e=>{e.preventDefault();const t=$('gbText').value.trim(),err=$('gbErr'),btn=$('gbSend');err.textContent='';
+  if(!t){err.textContent='내용을 써주세요.';return;}
+  if(gbServer()){busy(btn,true,'남기는 중…');const {error}=await sb.from('guestbook').insert({club_owner:curClub.id,message:t});busy(btn,false,'남기기');
+    if(error){err.textContent=/too_fast/.test(error.message||'')?'조금 전에 남겼어요. 30초 뒤에 다시 남길 수 있어요.':'남기지 못했어요. 잠시 후 다시 시도해 주세요.';return;}}
+  else if(sb){err.textContent='준비 중인 클럽이라 방명록을 남길 수 없어요.';return;}
+  else {try{const rows=JSON.parse(localStorage.getItem(gbLocalKey())||'[]');rows.unshift({id:Date.now(),text:t,at:new Date().toISOString(),nick:ME_NAME,by:ME_ID});localStorage.setItem(gbLocalKey(),JSON.stringify(rows.slice(0,50)));}catch(e){}}
+  $('gbText').value='';$('gbCount').textContent='0 / 200';toast('방명록을 남겼어요');loadGuestbook();});
 function enterClub(c){
   clubGhosts.forEach(dropGhost); clubGhosts=[];
   cur='club'; curClub=c; scene=clubScene;
@@ -872,7 +931,7 @@ function setHud(){
   const inClub=cur==='club';
   ['np','pl','chat'].forEach(id=>$(id).hidden=!inClub);
   $('sayBox').hidden=inClub;
-  $('exitBtn').hidden=!inClub; $('setBtn').hidden=!(inClub&&curClub===myClub); $('logoutBtn').hidden=inClub||!authed;
+  $('exitBtn').hidden=!inClub; $('gbBtn').hidden=!inClub; $('setBtn').hidden=!(inClub&&curClub===myClub); $('logoutBtn').hidden=inClub||!authed;
   $('enter').hidden=true; nearDoor=null;
   if(inClub&&innerWidth<=720) $('chat').classList.add('closed');
   syncChatToggle();
@@ -1040,8 +1099,8 @@ const setModal=$('setModal'), newModal=$('newModal'); let lastFocus;
 function openModal(m,focusSel){lastFocus=document.activeElement;m.hidden=false;setTimeout(()=>{const f=m.querySelector(focusSel);f&&f.focus();},30);}
 function closeModal(m){m.hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal'))));
-[setModal,newModal,$('shopModal'),$('boutModal')].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
-addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal,$('shopModal'),$('boutModal')].forEach(m=>{if(!m.hidden)closeModal(m);});});
+[setModal,newModal,$('shopModal'),$('boutModal'),$('gbModal')].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
+addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal,$('shopModal'),$('boutModal'),$('gbModal')].forEach(m=>{if(!m.hidden)closeModal(m);});});
 function showTab(name){document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));
   document.querySelectorAll('#setModal [data-pane]').forEach(p=>p.hidden=p.dataset.pane!==name);}
 document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
