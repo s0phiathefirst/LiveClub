@@ -689,8 +689,12 @@ const chats={};
 
 /* ---------- street ---------- */
 // street, left to right: plaza · 2 clubs · boutique · developer club (center, larger) · music shop · 2 clubs
+// main street (row 0): fixed lots. Back streets (row 1, 2, …) are added 16 m further back as clubs grow, 8 lots each.
 const SLOTS=[{x:-21.7,w:5.2},{x:-15.8,w:5.2},{x:-9.9,w:5.2,shop:'boutique'},{x:0,w:8.4,dev:true},{x:9.9,w:5.2,shop:'music'},{x:15.8,w:5.2},{x:21.7,w:5.2}];
-const CLUB_SLOTS=[1,5,0,6], DEV_SLOT=3;
+const MAIN_CLUB_SLOTS=[1,5,0,6], DEV_SLOT=3, ROW_GAP=16, PER_ROW=8;
+let CLUB_SLOTS=MAIN_CLUB_SLOTS.slice(), slotCount=SLOTS.length, backRows=0;
+function slotDef(i){ if(i<SLOTS.length) return Object.assign({row:0},SLOTS[i]);
+  const k=i-SLOTS.length; return {x:-20.65+(k%PER_ROW)*5.9,w:5.2,row:1+Math.floor(k/PER_ROW)}; }
 let streetClubs={};
 // center = developer club; the other club lots take my club first, then other people's newest clubs, then samples
 function assignSlots(){
@@ -698,9 +702,32 @@ function assignSlots(){
   streetClubs={[DEV_SLOT]:dc};
   const list=[]; if(myClub&&!isDev) list.push(myClub);
   realClubs.forEach(c=>list.push(c)); if(SAMPLES) others.forEach(c=>list.push(c));
+  // enough back rows for everyone, plus one free lot so a new club always has somewhere to go
+  backRows=Math.max(0,Math.ceil((list.length+1-MAIN_CLUB_SLOTS.length)/PER_ROW));
+  slotCount=SLOTS.length+backRows*PER_ROW;
+  CLUB_SLOTS=MAIN_CLUB_SLOTS.concat(Array.from({length:backRows*PER_ROW},(_,k)=>SLOTS.length+k));
   CLUB_SLOTS.forEach((sl,k)=>{const c=list[k]; if(c){c.slot=sl; streetClubs[sl]=c;}});
-  if(isDev&&myClub) myClub.slot=DEV_SLOT;}
-function rebuildStreet(){assignSlots();for(let i=0;i<SLOTS.length;i++)buildSlot(i);}
+  if(isDev&&myClub) myClub.slot=DEV_SLOT;
+  BOUNDS.street.z0=-4.1-backRows*ROW_GAP;}
+let rowsG=null;
+function buildBackRows(){
+  if(rowsG) streetScene.remove(rowsG); rowsG=new THREE.Group(); streetScene.add(rowsG); const prev=T; T=rowsG;
+  for(let r=1;r<=backRows;r++){ const z0=-ROW_GAP*r;
+    plane(70,9,M(0xffffff,{map:asphaltT}),0,.005,z0+1.5,-Math.PI/2);      // road between this row and the one in front
+    plane(70,3,M(0xffffff,{map:sidewalkT}),0,.01,z0-4.5,-Math.PI/2);      // sidewalk at this row's doors
+    [-14,-2,10,22].forEach(x=>{cyl(.06,3.6,M(0x2a2a30),x,1.8,z0+4.5);box(.3,.12,.22,B(0xffe3a0),x,3.5,z0+4.5);});
+    const l=new THREE.PointLight(0xffd9a0,.9,14,1.6); l.position.set(0,3.4,z0+1); rowsG.add(l); }
+  T=prev;}
+function rebuildStreet(){assignSlots();
+  for(let i=slotCount;i<slotGroups.length;i++){if(slotGroups[i])streetScene.remove(slotGroups[i]);slotGroups[i]=null;doors[i]=null;}
+  slotGroups.length=Math.min(slotGroups.length,slotCount); doors.length=Math.min(doors.length,slotCount);
+  buildBackRows(); for(let i=0;i<slotCount;i++)buildSlot(i);}
+// buildings you can't walk through (back rows only; the main street keeps its simple edge)
+function blocked(){const out=[];for(let i=0;i<slotCount;i++){const d=slotDef(i);if(!d.row)continue;const zo=-ROW_GAP*d.row;out.push({x0:d.x-d.w/2-.35,x1:d.x+d.w/2+.35,z0:zo-10.4,z1:zo-5.6});}
+  out.push({x0:-26,x1:24.4,z0:-10.4,z1:-5.6}); return out;}
+function pushOut(p){ if(cur!=='street'||!backRows) return; for(const r of blocked()){
+  if(p.x>r.x0&&p.x<r.x1&&p.z>r.z0&&p.z<r.z1){const dx0=p.x-r.x0,dx1=r.x1-p.x,dz0=p.z-r.z0,dz1=r.z1-p.z,m=Math.min(dx0,dx1,dz0,dz1);
+    if(m===dx0)p.x=r.x0;else if(m===dx1)p.x=r.x1;else if(m===dz0)p.z=r.z0;else p.z=r.z1;}}}
 const PLAZA_X=-28.3;
 const doors=[], slotGroups=[];
 const sidewalkT=tex(16,16,(g)=>{g.fillStyle='#4a4650';g.fillRect(0,0,16,16);g.fillStyle='#3a3640';g.fillRect(0,7,16,1);g.fillRect(0,15,16,1);g.fillRect(7,0,1,7);g.fillRect(15,8,1,7);g.fillStyle='#55505c';g.fillRect(1,1,5,1);g.fillRect(9,9,5,1);},40,4);
@@ -724,8 +751,9 @@ function buildSlot(i){
   if(slotGroups[i]) streetScene.remove(slotGroups[i]);
   const g=new THREE.Group(); slotGroups[i]=g; streetScene.add(g); const prev=T; T=g;
   let s=11+i*31; const r=()=>(s=(s*16807)%2147483647)/2147483647;
-  const def=SLOTS[i], x=def.x, w=def.w, big=!!def.dev, h=big?11:6.5+((i*7)%3)*1.4;
-  box(w,h,4,M(big?0x2a2236:BCOL[i]),x,h/2,-8);
+  const def=slotDef(i), x=def.x, w=def.w, big=!!def.dev, h=big?11:6.5+((i*7)%3)*1.4;
+  g.position.z=-ROW_GAP*def.row; g.userData.row=def.row;
+  box(w,h,4,M(big?0x2a2236:BCOL[i%BCOL.length]),x,h/2,-8);
   const cols=big?[-3,-1.5,0,1.5,3]:[-1.5,0,1.5];
   for(let y=big?5.4:3.9;y<h-.6;y+=1.3) cols.forEach(k=>{const lit=r()<.45; box(.9,.7,.06,lit?B(0xffd98a):M(0x1a2030),x+k,y,-5.98);});
   box(w-.3,big?3.6:2.6,.1,M(0x120e16),x,big?1.8:1.3,-5.97);
@@ -747,7 +775,7 @@ function buildSlot(i){
     box(.5,.3,.051,B(0x22222c),x+1.3,.92,-5.89);
     box(w,.1,.9,M(0x2a1a3a),x,2.55,-5.55); for(let k=0;k<6;k++) box(.38,.11,.92,M(0xff8ac4),x-w/2+.45+k*.86,2.56,-5.55);
     plane(2.6,2.2,new THREE.MeshBasicMaterial({color:0xff8ac4,transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending}),x,.016,-4.5,-Math.PI/2);
-    doors[i]={x,z:-3.7,shop:'boutique'}; }
+    doors[i]={x,z:-3.7+g.position.z,shop:'boutique'}; }
   else if(def.shop){
     // music shop: lit display window with guitars, striped awning; you talk to it, you don't go in
     sign('MUSIC SHOP','#ffd23a','악기점 · 클럽 오픈 상담','pixel');
@@ -755,14 +783,14 @@ function buildSlot(i){
     [[-1.4,0xe3342c],[-.7,0xe8dcc0],[.2,0x111114],[.9,0xd9974e]].forEach(([o,c])=>{box(.28,.42,.05,B(c),x+o,.82,-5.9);box(.06,.62,.05,B(0xe2c991),x+o,1.34,-5.9);});
     box(w,.1,.9,M(0xb3122a),x,2.55,-5.55); for(let k=0;k<6;k++) box(.38,.11,.92,M(0xf4e9dc),x-w/2+.45+k*.86,2.56,-5.55);
     plane(2.6,2.2,new THREE.MeshBasicMaterial({color:0xffd23a,transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending}),x,.016,-4.5,-Math.PI/2);
-    doors[i]={x,z:-3.7,shop:'music'}; }
+    doors[i]={x,z:-3.7+g.position.z,shop:'music'}; }
   else { const club=clubAtSlot(i);
     if(!club){ sign('COMING SOON','#8a8090','곧 새 클럽이 열려요','pixel'); doors[i]=null; }
     else { const sc=club.signColor||club.light;
       sign(club.name,sc,club.dev?'B1 · 24H OPEN':'B1 · LIVE',club.signFont); stairs(club.light,.35);
       if(big) marquee(0xffe3a0);
       if(club.neon) plane(2.6,.55,new THREE.MeshBasicMaterial({map:neonTex(club.neon,sc,club.signFont),transparent:true,depthWrite:false}),big?x-2.6:x-.9,1.7,-5.9);
-      doors[i]={x:dx,z:-3.7,club}; } }
+      doors[i]={x:dx,z:-3.7+g.position.z,club}; } }
   T=prev;}
 let signTimer; function refreshMySign(){clearTimeout(signTimer);signTimer=setTimeout(()=>{if(myClub&&myClub.slot!=null)buildSlot(myClub.slot);},250);}
 function buildStreet(){
@@ -788,12 +816,12 @@ function buildStreet(){
   [-5.7,5.7].forEach(x=>{const l=new THREE.PointLight(0xffd9a0,1.2,11,1.6);l.position.set(x+.6,3.3,-1.2);streetScene.add(l);});
   const devL=new THREE.PointLight(0xffe3a0,1.0,9,1.6); devL.position.set(0,4.4,-3.6); streetScene.add(devL);
   const pl=new THREE.PointLight(0xff5fa8,.9,9,1.6); pl.position.set(P,3,-3); streetScene.add(pl);
-  for(let i=0;i<SLOTS.length;i++) buildSlot(i);
+  rebuildStreet();
   T=clubScene;}
 
 /* ---------- applying a club's look ---------- */
 let cur='club', curClub=null, scene=clubScene;
-const BOUNDS={club:{x0:-6.4,x1:6.4,z0:-2.15,z1:5.4},street:{x0:-31,x1:24,z0:-4.1,z1:4.8}};
+const BOUNDS={club:{x0:-6.4,x1:6.4,z0:-2.15,z1:5.4},street:{x0:-31,x1:27,z0:-4.1,z1:4.8}};
 const baseCol=new THREE.Color(), tmpCol=new THREE.Color(), WHITE=new THREE.Color(0xffffff);
 const posterCache={};
 function inkFor(hex){const c=new THREE.Color(hex);const L=.2126*c.r+.7152*c.g+.0722*c.b;return L>.42?'#12080c':'#ffffff';}
@@ -1146,11 +1174,11 @@ function step(now){
   const dt=Math.min(.05,(now-last)/1000); last=now; const t=now/1000; const b=BOUNDS[cur];
   if(me.target){tmp.subVectors(me.target,me.pos);tmp.y=0;const d=tmp.length();
     if(d<.08)me.target=null;else{me.pos.addScaledVector(tmp,Math.min(d,3.4*dt)/d);if(Math.abs(tmp.x)>.15)me.s.scale.x=tmp.x<0?-1:1;}}
-  me.pos.x=Math.max(b.x0,Math.min(b.x1,me.pos.x)); me.pos.z=Math.max(b.z0,Math.min(b.z1,me.pos.z));
+  me.pos.x=Math.max(b.x0,Math.min(b.x1,me.pos.x)); me.pos.z=Math.max(b.z0,Math.min(b.z1,me.pos.z)); pushOut(me.pos);
   markerMat.opacity=Math.max(0,markerMat.opacity-dt*.8);
   const list=cur==='club'?clubGhosts:streetGhosts;
   list.forEach(g=>{g.next-=dt;
-    if(g.next<=0){g.next=3+rnd()*6;g.target=rnd()<.6?new THREE.Vector3(b.x0+1+rnd()*(b.x1-b.x0-2),0,b.z0+.5+rnd()*(b.z1-b.z0-1)):null;}
+    if(g.next<=0){g.next=3+rnd()*6;const zl=cur==='street'?-4.1:b.z0; g.target=rnd()<.6?new THREE.Vector3(b.x0+1+rnd()*(b.x1-b.x0-2),0,zl+.5+rnd()*(b.z1-zl-1)):null;}
     if(g.target){tmp.subVectors(g.target,g.pos);const d=tmp.length();if(d<.1)g.target=null;else{g.pos.addScaledVector(tmp,Math.min(d,1.3*dt)/d);if(Math.abs(tmp.x)>.1)g.s.scale.x=tmp.x<0?-1:1;}}});
   const W=innerWidth,H=innerHeight;
   list.concat([me]).forEach(g=>{
@@ -1172,6 +1200,10 @@ function step(now){
     if(curClub.smoke&&!reduce) haze.forEach(h=>{h.position.x+=Math.sin(t*.2+h.userData.p)*dt*.15;});
     if(curClub.props.ball&&!reduce) ball.rotation.y+=dt*.6;
   }
+  if(cur==='street'&&backRows){ const myRow=Math.max(0,Math.round((-me.pos.z-1)/ROW_GAP+.2));
+    slotGroups.forEach(gp=>{ if(!gp)return; const fade=gp.userData.row<myRow; if(gp.userData.faded===fade)return; gp.userData.faded=fade;
+      gp.traverse(o=>{ const m=o.material; if(!m)return; if(m.userData.op===undefined){m.userData.op=m.opacity;m.userData.wasT=m.transparent;m.userData.dw=m.depthWrite;}
+        m.transparent=fade||m.userData.wasT; m.opacity=fade?Math.min(.18,m.userData.op):m.userData.op; m.depthWrite=fade?false:m.userData.dw; m.needsUpdate=true; }); }); }
   camTarget(); camPos.lerp(camGoal,1-Math.pow(.02,dt)); camera.position.copy(camPos); camera.lookAt(look);
   renderer.render(scene,camera);
   requestAnimationFrame(step);
