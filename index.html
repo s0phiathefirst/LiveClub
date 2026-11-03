@@ -1223,7 +1223,7 @@ $('loginForm').addEventListener('submit',async e=>{e.preventDefault();const err=
   const login=$('lId').value.trim(), password=$('lPw').value;
   busy(btn,true,'확인 중…'); const j=await callApi({action:'login',login,password}); busy(btn,false,'로그인');
   if(j.ok&&await useSession(j)) return;
-  if(j.error==='unconfirmed'){pending={mode:'login',login};$('codeSent').textContent='이메일 인증이 아직 안 끝났어요. '+(j.email||'가입한 이메일')+'로 인증번호를 다시 보냈어요.';authTab('code');return;}
+  if(j.error==='unconfirmed'){err.textContent='이메일 인증 방식을 쓰던 예전 계정이라 로그인할 수 없어요. 운영자에게 계정 삭제를 요청한 뒤 다시 가입해 주세요.';return;}
   err.textContent=j.error==='invalid'?'아이디 또는 비밀번호가 맞지 않아요.':j.error==='rate'?'시도가 너무 많아요. 잠시 후 다시 해주세요.':'로그인하지 못했어요. 잠시 후 다시 시도해 주세요.';});
 $('signupForm').addEventListener('submit',async e=>{e.preventDefault();const err=$('signupErr'),btn=$('signupBtn');err.textContent='';
   const login=$('sId').value.trim(), nick=$('sNick').value.trim(), email=$('sEmail').value.trim(), pw=$('sPw').value;

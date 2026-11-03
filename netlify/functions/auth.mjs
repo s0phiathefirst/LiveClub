@@ -57,10 +57,8 @@ export default async (req) => {
       const j = await r.json().catch(() => ({}));
       if (r.ok) return json(session(j));
       const msg = (j.error_code || '') + ' ' + (j.msg || j.error_description || j.message || '');
-      if (/not.?confirmed/i.test(msg)) {
-        await fetch(`${URL_}/auth/v1/resend`, { method: 'POST', headers: headers(PUB, { 'Content-Type': 'application/json' }), body: JSON.stringify({ type: 'signup', email }) });
-        return json({ error: 'unconfirmed', email: mask(email) }, 401);
-      }
+      // email confirmation is turned off for this site, so no mail is sent here
+      if (/not.?confirmed/i.test(msg)) return json({ error: 'unconfirmed' }, 401);
       return json({ error: r.status === 429 ? 'rate' : 'invalid' }, r.status === 429 ? 429 : 401);
     }
 
