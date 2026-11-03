@@ -128,7 +128,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,label.btn:focus-wi
 #rotate.gone{opacity:0;pointer-events:none}
 #rotate svg{flex-shrink:0}
 #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .25s;z-index:40}
-#chatToggle{display:none}
+#chatToggle,#plToggle{display:none}
 /* settings: side sheet with a light scrim so the club stays visible while editing */
 .modal{position:absolute;inset:0;z-index:20;background:rgba(0,0,0,.25);display:flex;align-items:stretch;justify-content:flex-end;padding:16px;box-sizing:border-box}
 .modal.center{background:rgba(0,0,0,.62);align-items:center;justify-content:center}
@@ -168,26 +168,47 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
 .mini[disabled]{opacity:.35}
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .grid2 .wide{grid-column:1 / -1}
-@media (max-width:720px){
-  #np,#np.big,#np.small{width:228px;padding:8px 10px}
+/* phones (portrait or landscape): compact HUD. Top: club name + online count (left), now playing + 200x200 player (right).
+   Bottom: one row of buttons. Playlist and chat open as sheets one at a time. */
+@media (max-width:720px), (max-height:500px){
+  .hud{border-width:3px;box-shadow:4px 4px 0 #000}
+  #sign{max-width:calc(100% - 270px);padding:6px 10px;gap:2px}
+  #sign .label,#sign .sub,#signTags,#signFeat{display:none}
+  #sign .name{font-size:14px}
+  #online{font-size:12px}
+  #np,#np.big,#np.small{width:218px;padding:6px 8px;gap:4px}
+  #np .label{font-size:9px;letter-spacing:1px}
+  #sizeBtn{display:none}
+  #np .title{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #np .band{font-size:12px;margin-top:-2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #np .bar{height:6px}
+  #np .times{display:none}
   #np #ytWrap{width:200px;height:200px}
-  #np .title{font-size:16px}
-  #sign{max-width:calc(100% - 240px);padding:8px 10px}
-  #sign .name{font-size:16px}
-  #signFeat,#signTags{display:none}
-  #hint{top:calc(env(safe-area-inset-top,0px) + 150px);font-size:15px}
-  #pl{width:190px;padding:8px 10px}
-  #plRows{max-height:96px}
+  #soundBtn{min-height:36px;font-size:14px}
+  #ytMsg{font-size:12px}
+  #hint{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 70px);font-size:14px;padding:8px 12px}
+  #pl{display:none}
+  #pl.open{display:flex;bottom:calc(env(safe-area-inset-bottom,0px) + 64px);width:min(360px,calc(100% - 260px));min-width:220px;max-height:55vh;z-index:6}
+  #plRows{max-height:none;overflow-y:auto}
   .row{font-size:14px}
-  #chat,#sayBox{left:max(16px,calc(env(safe-area-inset-left,0px) + 12px));width:auto;z-index:5}
+  #chat{left:max(16px,calc(env(safe-area-inset-left,0px) + 12px));right:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 64px);width:min(380px,calc(100% - 260px));min-width:240px;z-index:6}
   #chat.closed{display:none}
-  #log{height:120px}
-  #chatToggle{display:block;position:absolute;min-height:48px}
-  #bottomL .btn{min-height:44px;font-size:15px;padding:0 10px}
+  #log{height:auto;max-height:26vh}
+  #sayBox{left:auto;width:min(320px,calc(100% - 32px));z-index:5}
+  #bottomL{gap:6px;right:max(16px,calc(env(safe-area-inset-right,0px) + 248px))}
+  #bottomL .btn{min-height:40px;font-size:14px;padding:0 10px}
+  #chatToggle:not([hidden]),#plToggle:not([hidden]){display:inline-flex}
+  #rotate{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 70px)}
   .modal{padding:0;align-items:flex-end;justify-content:stretch}
   .sheet{width:100%;max-height:62%}
   .modal.center .sheet{max-height:100%}
   .grid2{grid-template-columns:minmax(0,1fr)}
+}
+/* tall narrow phones: sheets can use the full width under the player */
+@media (max-width:520px){
+  #pl.open,#chat{width:auto;right:max(16px,calc(env(safe-area-inset-right,0px) + 12px));max-height:40vh}
+  #bottomL{right:max(16px,calc(env(safe-area-inset-right,0px) + 12px))}
+  #sign{max-width:calc(100% - 262px)}
 }
 @media (prefers-reduced-motion:reduce){#hint,#toast,#fade{transition:none}}
 </style>
@@ -228,6 +249,8 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
     <button class="btn" id="exitBtn" type="button">거리로 나가기 →</button>
     <button class="btn alt" id="setBtn" type="button">클럽 설정</button>
     <button class="btn alt" id="gbBtn" type="button">방명록</button>
+    <button class="btn alt" id="plToggle" type="button" aria-expanded="false">재생목록</button>
+    <button class="btn alt" id="chatToggle" type="button" aria-expanded="false">채팅</button>
     <button class="btn alt" id="logoutBtn" type="button" hidden>로그아웃</button>
   </div>
 
@@ -245,7 +268,6 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
       <button class="btn" type="submit">보내기</button>
     </form>
   </section>
-  <button class="btn R Bt" id="chatToggle" type="button">채팅</button>
 
   <section class="hud R Bt" id="sayBox" aria-label="말풍선" hidden>
     <p class="help">거리에서는 말풍선만 잠깐 떠요. 대화는 클럽 안에서!</p>
@@ -980,7 +1002,7 @@ function setHud(){
   $('sayBox').hidden=inClub;
   $('exitBtn').hidden=!inClub; $('gbBtn').hidden=!inClub; $('setBtn').hidden=!(inClub&&curClub===myClub); $('logoutBtn').hidden=inClub||!authed;
   $('enter').hidden=true; nearDoor=null;
-  if(inClub&&innerWidth<=720) $('chat').classList.add('closed');
+  if(inClub&&isPhone()){ $('chat').classList.add('closed'); $('pl').classList.remove('open'); }
   syncChatToggle();
 }
 function go(fn){ if(reduce){fn();return;} $('fade').style.opacity=1; setTimeout(()=>{fn();$('fade').style.opacity=0;},260); }
@@ -1021,12 +1043,17 @@ $('chatForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('chat
   const m={who:ME_NAME,text:t,me:true};chats[curClub.id].push(m);drawMsg(m);say(me,t);inp.value='';rtSend('chat',{text:t});});
 $('sayForm').addEventListener('submit',e=>{e.preventDefault();const inp=$('sayInput');const t=inp.value.trim();if(!t)return;say(me,t);inp.value='';rtSend('say',{text:t});});
 const chat=$('chat');
-function syncChatToggle(){$('chatToggle').hidden=!(cur==='club'&&innerWidth<=720&&chat.classList.contains('closed'));}
+const phoneMQ=matchMedia('(max-width:720px), (max-height:500px)'); const isPhone=()=>phoneMQ.matches;
+function syncChatToggle(){const on=cur==='club'&&isPhone(); $('chatToggle').hidden=!on; $('plToggle').hidden=!on;
+  $('chatToggle').setAttribute('aria-expanded',String(!chat.classList.contains('closed'))); $('plToggle').setAttribute('aria-expanded',String($('pl').classList.contains('open')));
+  $('chatToggle').textContent=chat.classList.contains('closed')?'채팅':'채팅 닫기'; $('plToggle').textContent=$('pl').classList.contains('open')?'재생목록 닫기':'재생목록';}
+try{phoneMQ.addEventListener('change',()=>{if(isPhone())chat.classList.add('closed');else{chat.classList.remove('closed');$('pl').classList.remove('open');}syncChatToggle();});}catch(e){}
 $('chatClose').addEventListener('click',()=>{
-  if(innerWidth<=720) chat.classList.add('closed');
+  if(isPhone()) chat.classList.add('closed');
   else{log.hidden=!log.hidden;$('chatForm').hidden=log.hidden;$('chatClose').textContent=log.hidden?'펼치기':'접기';}
   syncChatToggle();});
-$('chatToggle').addEventListener('click',()=>{chat.classList.remove('closed');syncChatToggle();});
+$('chatToggle').addEventListener('click',()=>{const open=chat.classList.toggle('closed')===false; if(open)$('pl').classList.remove('open'); syncChatToggle();});
+$('plToggle').addEventListener('click',()=>{const open=$('pl').classList.toggle('open'); if(open)chat.classList.add('closed'); syncChatToggle();});
 
 /* ---------- playlist: loops in order (or a daily shuffle), synced to the real clock ---------- */
 const mmss=s=>String(s/60|0).padStart(2,'0')+':'+String(s%60|0).padStart(2,'0');
