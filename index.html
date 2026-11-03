@@ -52,6 +52,10 @@ body{background:var(--ink);color:var(--paper);font-family:var(--body);overflow:h
 #np{width:280px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
 #np .title{font-size:19px;color:#fff;line-height:1.2}
 #np .band{font-size:14px;color:var(--muted);margin-top:-4px}
+#ytWrap{width:100%;min-width:200px;height:200px;background:#000;border:2px solid #000}
+#ytWrap iframe{display:block;width:100%;height:100%;border:0}
+#ytMsg{font-size:13px;color:var(--muted);line-height:1.4;margin:0}
+#ytMsg:empty{display:none}
 .bar{position:relative;height:10px;background:repeating-linear-gradient(90deg,#3a1a22 0 10px,transparent 10px 13px)}
 .bar i{position:absolute;inset:0 auto 0 0;background:repeating-linear-gradient(90deg,var(--led) 0 10px,transparent 10px 13px)}
 .times{display:flex;justify-content:space-between;font-family:var(--pixel);font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -147,7 +151,7 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .grid2 .wide{grid-column:1 / -1}
 @media (max-width:720px){
-  #np{width:190px;padding:8px 10px}
+  #np{width:228px;padding:8px 10px}
   #np .title{font-size:16px}
   #sign{max-width:calc(100% - 240px);padding:8px 10px}
   #sign .name{font-size:16px}
@@ -188,6 +192,9 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
     <div class="band" id="npBand"></div>
     <div class="bar"><i id="prog" style="width:0%"></i></div>
     <div class="times"><span id="tcur">00:00</span><span id="tend">00:00</span></div>
+    <div id="ytWrap" hidden><div id="yt"></div></div>
+    <button class="btn gold" id="soundBtn" type="button" hidden>소리 켜고 듣기</button>
+    <p id="ytMsg"></p>
   </div>
 
   <section class="hud L" id="pl" aria-label="플레이리스트">
@@ -585,10 +592,10 @@ function upTex(rows,palette,scale){const w=rows[0].length,h=rows.length,c=docume
   const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
 const ghostT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
   const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
-// the developer's ghost wears a tuxedo: bow tie under the mouth, white shirt strip, black jacket with lapels
+// the developer's ghost wears a bow tie
+const BOW={13:'XX....XX',14:'XXXKKXXX',15:'XX....XX'};   // 8 px wide, centred on x 6..13
 const tuxT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
-  if(y===12&&x>=7&&x<=12) return (x===9||x===10)?'#3a3a44':'#0c0c10';
-  if(y>=13){ if(x>=9&&x<=10) return ((y===15||y===17)?'#1a1a20':'#f4f2ec'); if(x===8||x===11) return '#f4f2ec'; if(x===7||x===12) return '#2e2e3a'; return '#15151b'; }
+  const b=BOW[y]; if(b&&x>=6&&x<=13){const c=b[x-6]; if(c==='X')return '#141418'; if(c==='K')return '#3a3a46';}
   const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
 const crownT=upTex(["X...X...X","X..XXX..X","XXXXRXXXX","XXXXXXXXX","XXXXXXXXX","ddddddddd"],(ch)=>ch==='.'?null:ch==='R'?'#ff4458':ch==='d'?'#c9971a':'#ffd23a',4);
 const shadowT=tex(16,8,(g)=>{g.fillStyle='rgba(0,0,0,.55)';g.fillRect(3,1,10,6);g.fillRect(1,2,14,4);});
@@ -790,6 +797,7 @@ function enterClub(c){
   if(c.welcome) toast(c.welcome);
 }
 function goStreet(near){
+  stopPlayback(); $('ytMsg').textContent='';
   clubGhosts.forEach(dropGhost); clubGhosts=[];
   cur='street'; scene=streetScene; streetScene.add(me.s,me.sh,me.crown); me.crown.visible=false;
   if(near) me.pos.set(near.x,0,near.z+1.3); else me.pos.set(0,0,1);
@@ -863,15 +871,60 @@ function renderPL(){
     r.innerHTML='<span class="n">'+String(i+1).padStart(2,'0')+'</span><span class="s"></span>';r.querySelector('.s').textContent=s.t+' · '+s.b;box.appendChild(r);return r;});
   if(!c.set.length){const r=document.createElement('div');r.className='row';r.textContent=c===myClub?'클럽 설정에서 곡을 추가해 보세요':'아직 공연 준비 중이에요';box.appendChild(r);}
   tick();}
+/* ---------- YouTube playback: everyone in a club plays the same song from the same second ---------- */
+const ytId=u=>{const m=String(u||'').match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/);return m?m[1]:null;};
+let yt=null, ytReady=false, ytLoading=null, ytLoadedId=null, lastP=0, lastSync=0, ytApi=null;
+function loadYtApi(){
+  if(ytApi) return ytApi;
+  ytApi=new Promise((res,rej)=>{
+    if(window.YT&&window.YT.Player){res();return;}
+    window.onYouTubeIframeAPIReady=()=>res();
+    const sc=document.createElement('script'); sc.src='https://www.youtube.com/iframe_api'; sc.onerror=()=>{ytApi=null;rej();}; document.head.appendChild(sc);});
+  return ytApi;}
+function ensurePlayer(){
+  if(ytLoading) return ytLoading;
+  ytLoading=loadYtApi().then(()=>new Promise(res=>{
+    yt=new YT.Player('yt',{width:'100%',height:'100%',playerVars:{playsinline:1,rel:0,controls:1},
+      events:{onReady:()=>{ytReady=true;res(yt);},
+        onStateChange:e=>{if(e.data===1){$('soundBtn').hidden=true;learnDuration();}},
+        onError:()=>{$('ytMsg').textContent='이 곡은 유튜브에서 다른 사이트 재생을 막아뒀어요. 다음 곡을 기다려 주세요.';}}});}))
+    .catch(()=>{ytLoading=null;$('ytMsg').textContent='유튜브에 연결하지 못했어요. 새로고침해 주세요.';});
+  return ytLoading;}
+function stopPlayback(){ytLoadedId=null;$('soundBtn').hidden=true;$('ytWrap').hidden=true;if(yt&&ytReady){try{yt.stopVideo();}catch(e){}}}
+function syncPlayback(song,p){
+  const id=ytId(song.u);
+  if(!id){stopPlayback();$('ytMsg').textContent='이 곡은 유튜브 링크가 없어서 소리가 나지 않아요.'+(curClub===myClub?' 클럽 설정 > 플레이리스트에서 링크를 넣어주세요.':'');return;}
+  $('ytWrap').hidden=false; if($('ytMsg').textContent.startsWith('이 곡은 유튜브 링크'))$('ytMsg').textContent='';
+  if(!ytReady){ensurePlayer();return;}
+  if(ytLoadedId!==id){ytLoadedId=id;$('ytMsg').textContent='';yt.loadVideoById({videoId:id,startSeconds:Math.floor(p)});
+    // browsers may block sound until the visitor taps once; offer a button if it didn't start
+    setTimeout(()=>{if(cur==='club'&&ytLoadedId===id&&yt.getPlayerState()!==1)$('soundBtn').hidden=false;},2500);return;}
+  const now=Date.now();
+  if(now-lastSync>8000){lastSync=now;if(yt.getPlayerState()===1&&Math.abs(yt.getCurrentTime()-p)>3)yt.seekTo(p,true);}}
+$('soundBtn').addEventListener('click',()=>{if(!yt||!ytReady)return;yt.seekTo(lastP,true);yt.playVideo();$('soundBtn').hidden=true;});
+// the owner's songs added without a measured length get their real length the first time they play
+function learnDuration(){
+  if(!curClub||curClub!==myClub||curIdx<0)return; const song=myClub.set[curIdx]; if(!song||!song.auto||ytId(song.u)!==ytLoadedId)return;
+  const d=Math.round(yt.getDuration()); if(d>30){song.d=d;song.auto=false;saveMine();}}
+// read a video's length without playing it (a muted, cued player off-screen, removed right after)
+function measureDuration(id){
+  return loadYtApi().then(()=>new Promise(res=>{
+    const holder=document.createElement('div'); holder.style.cssText='position:fixed;left:-9999px;top:0;width:200px;height:200px;';
+    const inner=document.createElement('div'); holder.appendChild(inner); document.body.appendChild(holder);
+    let done=false, pl=null; const fin=v=>{if(done)return;done=true;try{pl&&pl.destroy();}catch(e){}holder.remove();res(v);};
+    pl=new YT.Player(inner,{width:200,height:200,videoId:id,playerVars:{mute:1},
+      events:{onReady:()=>{let n=20;const look=()=>{const d=pl.getDuration();if(d>0)fin(Math.round(d));else if(n-->0)setTimeout(look,300);else fin(0);};look();},
+              onError:()=>fin(-1)}});
+    setTimeout(()=>fin(0),10000);})).catch(()=>0);}
 function tick(){
   if(cur!=='club'||!curClub)return; const set=curClub.set;
-  if(!set.length){$('npLabel').textContent='NOW PLAYING';$('npTitle').textContent='조용한 밤';$('npBand').textContent='플레이리스트가 비어 있어요';$('tcur').textContent='00:00';$('tend').textContent='00:00';$('prog').style.width='0%';return;}
+  if(!set.length){stopPlayback();$('npLabel').textContent='NOW PLAYING';$('npTitle').textContent='조용한 밤';$('npBand').textContent='플레이리스트가 비어 있어요';$('tcur').textContent='00:00';$('tend').textContent='00:00';$('prog').style.width='0%';return;}
   const order=playOrder(curClub); const total=set.reduce((a,s)=>a+s.d,0);
   let p=(Date.now()/1000)%total, k=0; while(p>=set[order[k]].d){p-=set[order[k]].d;k++;} const i=order[k];
   if(i!==curIdx){curIdx=i;$('npTitle').textContent=set[i].t;$('npBand').textContent=set[i].b;
     $('npLabel').textContent='NOW PLAYING · '+(k+1)+'/'+set.length; $('tend').textContent=mmss(set[i].d);
     rowEls.forEach((r,j)=>r.classList.toggle('on',j===i)); if(rowEls[i]) rowEls[i].scrollIntoView({block:'nearest'});}
-  $('tcur').textContent=mmss(p); $('prog').style.width=(p/set[i].d*100)+'%';}
+  $('tcur').textContent=mmss(p); $('prog').style.width=(p/set[i].d*100)+'%'; lastP=p; syncPlayback(set[i],p);}
 setInterval(tick,1000);
 
 /* ---------- doors ---------- */
@@ -983,9 +1036,11 @@ $('addForm').addEventListener('submit',e=>{e.preventDefault();
   if(!t||!b){err.textContent='곡 제목과 아티스트를 입력해 주세요.';return;}
   if(!u){err.textContent='유튜브 링크를 넣어주세요. 곡 길이를 이 링크에서 계산해요.';return;}
   if(!/^https?:\/\/(www\.|m\.|music\.)?(youtube\.com\/watch\?v=|youtu\.be\/)[\w-]{6,}/.test(u)){err.textContent='유튜브 영상 링크 형식이 아니에요. youtube.com/watch?v=… 또는 youtu.be/… 링크를 넣어주세요.';return;}
-  // the real site asks the YouTube player for the length here; this preview can't reach YouTube, so it holds 3:30
-  myClub.set.push({t,b,u,d:210,auto:true});saveMine();err.textContent='';['aTitle','aArtist','aUrl'].forEach(id=>$(id).value='');
-  renderTList();renderPL();fillFeature();toast('플레이리스트에 추가했어요');});
+  const btn=e.submitter||$('addForm').querySelector('button[type=submit]'); btn.disabled=true; btn.textContent='곡 길이 확인 중…'; err.textContent='';
+  measureDuration(ytId(u)).then(d=>{btn.disabled=false; btn.textContent='곡 추가';
+    if(d===-1){err.textContent='이 영상은 유튜브에서 다른 사이트 재생을 막아뒀어요. 같은 곡의 "아티스트 - Topic" 링크를 찾아 넣어주세요.';return;}
+    myClub.set.push(d>0?{t,b,u,d}:{t,b,u,d:210,auto:true}); saveMine(); ['aTitle','aArtist','aUrl'].forEach(id=>$(id).value='');
+    renderTList();renderPL();fillFeature();toast(d>0?'플레이리스트에 추가했어요 ('+mmss(d)+')':'추가했어요. 길이는 처음 재생될 때 자동으로 맞춰져요');});});
 $('fDel').addEventListener('input',()=>{$('delBtn').disabled=$('fDel').value.trim()!==myClub.name;});
 $('delForm').addEventListener('submit',e=>{e.preventDefault();if($('fDel').value.trim()!==myClub.name)return;
   const slot=myClub.slot; delete chats[myClub.id]; myClub=null; saveMine(); closeModal(setModal); rebuildStreet();
