@@ -260,6 +260,8 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
       </div>
 
       <div class="pane" data-pane="space">
+        <div class="notice" id="legacyBox" hidden>이 브라우저에 체험 모드 때 꾸민 클럽 <b id="legacyName"></b>이(가) 남아 있어요. 가져오면 지금 클럽의 꾸미기와 플레이리스트가 그 내용으로 바뀌어요.
+          <div class="hrow" style="margin-top:8px"><button class="btn gold" type="button" id="legacyBtn">예전 클럽 가져오기</button></div></div>
         <p class="help">여기 있는 항목은 모두 선택이에요. 그대로 둬도 클럽은 열려요.</p>
         <div class="field"><span>무대 뒷벽</span><div class="seg" id="oBack"></div>
           <div class="hrow"><div class="bthumb" id="backThumb">사진 없음</div>
@@ -1023,7 +1025,20 @@ function swatches(el,curVal,onPick){el.innerHTML='';
   const ci=document.createElement('input');ci.type='color';ci.value=LIGHTS.includes(curVal)?'#ff3050':curVal;ci.setAttribute('aria-label','조명 색 직접 고르기');
   ci.addEventListener('input',()=>{[...el.querySelectorAll('button')].forEach(x=>x.setAttribute('aria-pressed','false'));onPick(ci.value);});el.appendChild(ci);}
 function commit(signToo){saveMine();if(curClub===myClub)applyLook(myClub);if(signToo)refreshMySign();}
+// clubs decorated in demo mode live only in this browser (localStorage); offer to bring the newest one into the account
+function findLegacy(){
+  if(!sb) return null; let best=null;
+  try{for(let k=0;k<localStorage.length;k++){const key=localStorage.key(k); if(!key||!key.startsWith('cs.club.'))continue;
+    const v=JSON.parse(localStorage.getItem(key)||'null'); if(!v||!v.name)continue;
+    const score=(v.set||[]).length*10+(v.posters||[]).length+(v.backdropImg?1:0); if(!best||score>best.score) best={key,club:v,score};}}catch(e){}
+  return best;}
+$('legacyBtn').addEventListener('click',()=>{const L=findLegacy(); if(!L)return;
+  const keep={id:ME_ID,owner:ME_NAME,dev:isDev,slot:myClub.slot};
+  myClub=norm(Object.assign(JSON.parse(JSON.stringify(L.club)),keep)); saveMine();
+  try{localStorage.removeItem(L.key);}catch(e){}
+  applyLook(myClub); renderPL(); rebuildStreet(); fillSettings(); toast('예전 클럽을 가져왔어요. 이제 계정에 저장돼요');});
 function fillSettings(){
+  const L=findLegacy(); $('legacyBox').hidden=!L; if(L) $('legacyName').textContent='"'+L.club.name+'"';
   const c=myClub;
   seg($('oBack'),BACK_LABELS,c.backdrop,pickBack); renderBackThumb(); renderPosterSlots(); $('nameErr').textContent='';
   seg($('oFloor'),FLOOR_LABELS,c.floor,v=>{c.floor=v;commit();});
