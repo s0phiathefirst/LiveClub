@@ -671,7 +671,7 @@ function saveMine(){
     const {error}=await sb.from('clubs').upsert({owner:ME_ID,data,updated_at:new Date().toISOString()});
     if(error) toast('저장하지 못했어요. 잠시 후 다시 시도해 주세요');},700);}
 // what everyone else sees in the middle until the developer account signs in and decorates it
-const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:'O.de',slot:DEV_SLOT,ownerHere:false}));
+const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:'O.de',ownerHere:false}));
 let devReal=null, realClubs=[];   // clubs loaded from the server
 const others=[
   norm({id:'basement',name:'BASEMENT 404',owner:'minjae',slot:-1,ownerHere:true,light:'#3a7bff',pattern:'shift',smoke:true,rug:'none',props:{sofa:true,tables:false},
@@ -692,7 +692,8 @@ const CLUB_SLOTS=[1,5,0,6], DEV_SLOT=3;
 let streetClubs={};
 // center = developer club; the other club lots take my club first, then other people's newest clubs, then samples
 function assignSlots(){
-  streetClubs={[DEV_SLOT]:isDev?myClub:(devReal||devClub)};
+  const dc=isDev?myClub:(devReal||devClub); if(dc) dc.slot=DEV_SLOT;
+  streetClubs={[DEV_SLOT]:dc};
   const list=[]; if(myClub&&!isDev) list.push(myClub);
   realClubs.forEach(c=>list.push(c)); if(SAMPLES) others.forEach(c=>list.push(c));
   CLUB_SLOTS.forEach((sl,k)=>{const c=list[k]; if(c){c.slot=sl; streetClubs[sl]=c;}});
