@@ -53,6 +53,12 @@ body{background:var(--ink);color:var(--paper);font-family:var(--body);overflow:h
 #np .title{font-size:19px;color:#fff;line-height:1.2}
 #np .band{font-size:14px;color:var(--muted);margin-top:-4px}
 #ytWrap{width:100%;min-width:200px;height:200px;background:#000;border:2px solid #000}
+#np.big{width:380px}
+#np.big #ytWrap{height:214px}
+#np.small{width:232px}
+#np.small #ytWrap{width:200px;height:200px}
+.nphead{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.nphead .ghostbtn{color:var(--led-soft)}
 #ytWrap iframe{display:block;width:100%;height:100%;border:0}
 #ytMsg{font-size:13px;color:var(--muted);line-height:1.4;margin:0}
 #ytMsg:empty{display:none}
@@ -151,7 +157,8 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
 .grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .grid2 .wide{grid-column:1 / -1}
 @media (max-width:720px){
-  #np{width:228px;padding:8px 10px}
+  #np,#np.big,#np.small{width:228px;padding:8px 10px}
+  #np #ytWrap{width:200px;height:200px}
   #np .title{font-size:16px}
   #sign{max-width:calc(100% - 240px);padding:8px 10px}
   #sign .name{font-size:16px}
@@ -187,7 +194,7 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
   </div>
 
   <div class="hud R Tp" id="np" aria-live="polite">
-    <div class="label" id="npLabel">NOW PLAYING</div>
+    <div class="nphead"><div class="label" id="npLabel">NOW PLAYING</div><button class="ghostbtn" id="sizeBtn" type="button" aria-label="무대 스크린 크기 바꾸기">화면 작게</button></div>
     <div class="title" id="npTitle"></div>
     <div class="band" id="npBand"></div>
     <div class="bar"><i id="prog" style="width:0%"></i></div>
@@ -319,6 +326,21 @@ input[type=color]{width:48px;height:38px;padding:0;border:3px solid #000;backgro
         <button class="btn danger" type="submit" id="delBtn" disabled>클럽 삭제하기</button>
       </form>
     </div>
+  </div>
+
+  <!-- boutique -->
+  <div class="modal center" id="boutModal" hidden role="dialog" aria-modal="true" aria-labelledby="boutTitle">
+    <form class="sheet" id="nickForm" autocomplete="off">
+      <header><h2 id="boutTitle">BOUTIQUE</h2><button class="btn alt" type="button" data-close>닫기</button></header>
+      <div class="pane">
+        <p style="margin:0;font-size:18px;line-height:1.55;color:#fff">어서 오세요. 오늘은 어떤 이름표를 달아볼까요?</p>
+        <div class="field"><label for="nickNew">새 닉네임</label><input class="inp" id="nickNew" maxlength="12">
+          <p class="help" id="nickHelp">한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자. 닉네임은 하루에 한 번 바꿀 수 있어요.</p></div>
+        <div class="err" id="nickErr"></div>
+        <button class="btn gold" type="submit" id="nickBtn">닉네임 바꾸기</button>
+        <div class="notice">옷 입히기 코너는 준비 중이에요. 곧 유령에게 옷을 입혀볼 수 있어요.</div>
+      </div>
+    </form>
   </div>
 
   <!-- music shop -->
@@ -592,11 +614,13 @@ function upTex(rows,palette,scale){const w=rows[0].length,h=rows.length,c=docume
   const t=new THREE.CanvasTexture(c);t.magFilter=THREE.NearestFilter;t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
 const ghostT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
   const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
-// the developer's ghost wears a bow tie
-const BOW={13:'XX....XX',14:'XXXKKXXX',15:'XX....XX'};   // 8 px wide, centred on x 6..13
+// suit: white shirt V under the mouth, charcoal jacket with lighter lapels and two buttons, no tie
+const SUIT={12:'JLWWWWLJ',13:'JJLWWLJJ',14:'JJJLLJJJ'};   // x 6..13, rows 12-14; jacket below that
 const tuxT=upTex(GHOST,(ch,x,y,rows)=>{if(ch==='.')return null;if(ch==='E'||ch==='M')return '#1a1418';
-  const b=BOW[y]; if(b&&x>=6&&x<=13){const c=b[x-6]; if(c==='X')return '#141418'; if(c==='K')return '#3a3a46';}
-  const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4);
+  if(y>=12){ const r=SUIT[y]; if(r&&x>=6&&x<=13){const c=r[x-6]; if(c==='W')return '#f4f2ec'; if(c==='L')return '#3a3a4a';}
+    if(y>=15&&(x===9||x===10)&&(y===16||y===18)) return '#6a6a78';
+    return x===0||x===19||(rows[y][x+1]==='.')?'#16161e':'#22222c'; }
+  const row=rows[y];return (x===row.length-1||row[x+1]==='.'||(rows[y+1]&&rows[y+1][x]==='.'))?'#c9c3b8':'#ebe7df';},4)
 const crownT=upTex(["X...X...X","X..XXX..X","XXXXRXXXX","XXXXXXXXX","XXXXXXXXX","ddddddddd"],(ch)=>ch==='.'?null:ch==='R'?'#ff4458':ch==='d'?'#c9971a':'#ffd23a',4);
 const shadowT=tex(16,8,(g)=>{g.fillStyle='rgba(0,0,0,.55)';g.fillRect(3,1,10,6);g.fillRect(1,2,14,4);});
 const tagsEl=$('tags');
@@ -647,7 +671,7 @@ function saveMine(){
     const {error}=await sb.from('clubs').upsert({owner:ME_ID,data,updated_at:new Date().toISOString()});
     if(error) toast('저장하지 못했어요. 잠시 후 다시 시도해 주세요');},700);}
 // what everyone else sees in the middle until the developer account signs in and decorates it
-const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:'O.de',slot:2,ownerHere:false}));
+const devClub=norm(Object.assign(JSON.parse(JSON.stringify(DEFAULT_MINE)),{id:'dev',owner:'O.de',slot:DEV_SLOT,ownerHere:false}));
 let devReal=null, realClubs=[];   // clubs loaded from the server
 const others=[
   norm({id:'basement',name:'BASEMENT 404',owner:'minjae',slot:-1,ownerHere:true,light:'#3a7bff',pattern:'shift',smoke:true,rug:'none',props:{sofa:true,tables:false},
@@ -662,19 +686,19 @@ others.forEach(c=>c.sample=true);
 const chats={};
 
 /* ---------- street ---------- */
-// street, left to right: plaza · 2 clubs · developer club (center, larger) · music shop · 2 clubs
-const SLOTS=[{x:-15.8,w:5.2},{x:-9.9,w:5.2},{x:0,w:8.4,dev:true},{x:9.9,w:5.2,shop:true},{x:15.8,w:5.2},{x:21.7,w:5.2}];
-const CLUB_SLOTS=[0,1,4,5];
+// street, left to right: plaza · 2 clubs · boutique · developer club (center, larger) · music shop · 2 clubs
+const SLOTS=[{x:-21.7,w:5.2},{x:-15.8,w:5.2},{x:-9.9,w:5.2,shop:'boutique'},{x:0,w:8.4,dev:true},{x:9.9,w:5.2,shop:'music'},{x:15.8,w:5.2},{x:21.7,w:5.2}];
+const CLUB_SLOTS=[1,5,0,6], DEV_SLOT=3;
 let streetClubs={};
 // center = developer club; the other club lots take my club first, then other people's newest clubs, then samples
 function assignSlots(){
-  streetClubs={2:isDev?myClub:(devReal||devClub)};
+  streetClubs={[DEV_SLOT]:isDev?myClub:(devReal||devClub)};
   const list=[]; if(myClub&&!isDev) list.push(myClub);
   realClubs.forEach(c=>list.push(c)); if(SAMPLES) others.forEach(c=>list.push(c));
   CLUB_SLOTS.forEach((sl,k)=>{const c=list[k]; if(c){c.slot=sl; streetClubs[sl]=c;}});
-  if(isDev&&myClub) myClub.slot=2;}
+  if(isDev&&myClub) myClub.slot=DEV_SLOT;}
 function rebuildStreet(){assignSlots();for(let i=0;i<SLOTS.length;i++)buildSlot(i);}
-const PLAZA_X=-22.4;
+const PLAZA_X=-28.3;
 const doors=[], slotGroups=[];
 const sidewalkT=tex(16,16,(g)=>{g.fillStyle='#4a4650';g.fillRect(0,0,16,16);g.fillStyle='#3a3640';g.fillRect(0,7,16,1);g.fillRect(0,15,16,1);g.fillRect(7,0,1,7);g.fillRect(15,8,1,7);g.fillStyle='#55505c';g.fillRect(1,1,5,1);g.fillRect(9,9,5,1);},40,4);
 const asphaltT=tex(16,16,(g)=>{g.fillStyle='#1e1d26';g.fillRect(0,0,16,16);for(let i=0;i<24;i++){g.fillStyle=rnd()<.5?'#26242e':'#18171f';g.fillRect(rnd()*16|0,rnd()*16|0,1,1);}},40,6);
@@ -691,7 +715,7 @@ function neonTex(text,col,font){const c=document.createElement('canvas');c.width
   const fam=FONTS[font]||FONTS.pixel; let fs=font==='hand'?28:20; g.font=fs+'px '+fam; while(g.measureText(text).width>170&&fs>9){fs--;g.font=fs+'px '+fam;}
   g.textAlign='center';g.textBaseline='middle';g.shadowColor=col;g.shadowBlur=10;g.fillStyle=col;g.fillText(text,96,21);g.shadowBlur=0;g.fillStyle='#fff';g.globalAlpha=.55;g.fillText(text,96,21);
   const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;t.generateMipmaps=false;return t;}
-const BCOL=[0x3a2a3a,0x2f3442,0x4a2f2a,0x3d3346,0x2e3a34,0x433a2c];
+const BCOL=[0x3a2a3a,0x2f3442,0x4a2f2a,0x2a2236,0x3d3346,0x2e3a34,0x433a2c];
 function clubAtSlot(i){return streetClubs[i]||null;}
 function buildSlot(i){
   if(slotGroups[i]) streetScene.remove(slotGroups[i]);
@@ -712,14 +736,23 @@ function buildSlot(i){
   // marquee bulbs frame the developer club's sign
   const marquee=(col)=>{const m=B(col);for(let k=0;k<=14;k++){const bx=x-2.9+k*5.8/14;box(.09,.09,.06,m,bx,5.22,-5.88);box(.09,.09,.06,m,bx,3.68,-5.88);}
     for(let k=1;k<4;k++){const by=3.68+k*1.54/4;box(.09,.09,.06,m,x-2.9,by,-5.88);box(.09,.09,.06,m,x+2.9,by,-5.88);}};
-  if(def.shop){
+  if(def.shop==='boutique'){
+    // boutique: mannequin ghosts in a pink-lit window; change your nickname here (outfits later)
+    sign('BOUTIQUE','#ff8ac4','유령 옷가게 · 닉네임 변경','pixel');
+    box(w-.9,1.7,.06,B(0x3a1830),x,1.25,-5.93);
+    [-1.3,0,1.3].forEach(o=>{box(.5,.6,.05,B(0xf4f2ec),x+o,1.05,-5.9);box(.38,.2,.05,B(0xf4f2ec),x+o,1.43,-5.9);box(.06,.5,.05,B(0x8a8a94),x+o,.5,-5.9);});
+    box(.5,.3,.051,B(0x22222c),x+1.3,.92,-5.89);
+    box(w,.1,.9,M(0x2a1a3a),x,2.55,-5.55); for(let k=0;k<6;k++) box(.38,.11,.92,M(0xff8ac4),x-w/2+.45+k*.86,2.56,-5.55);
+    plane(2.6,2.2,new THREE.MeshBasicMaterial({color:0xff8ac4,transparent:true,opacity:.14,depthWrite:false,blending:THREE.AdditiveBlending}),x,.016,-4.5,-Math.PI/2);
+    doors[i]={x,z:-3.7,shop:'boutique'}; }
+  else if(def.shop){
     // music shop: lit display window with guitars, striped awning; you talk to it, you don't go in
     sign('MUSIC SHOP','#ffd23a','악기점 · 클럽 오픈 상담','pixel');
     box(w-.9,1.7,.06,B(0x3a2614),x,1.25,-5.93);
     [[-1.4,0xe3342c],[-.7,0xe8dcc0],[.2,0x111114],[.9,0xd9974e]].forEach(([o,c])=>{box(.28,.42,.05,B(c),x+o,.82,-5.9);box(.06,.62,.05,B(0xe2c991),x+o,1.34,-5.9);});
     box(w,.1,.9,M(0xb3122a),x,2.55,-5.55); for(let k=0;k<6;k++) box(.38,.11,.92,M(0xf4e9dc),x-w/2+.45+k*.86,2.56,-5.55);
     plane(2.6,2.2,new THREE.MeshBasicMaterial({color:0xffd23a,transparent:true,opacity:.16,depthWrite:false,blending:THREE.AdditiveBlending}),x,.016,-4.5,-Math.PI/2);
-    doors[i]={x,z:-3.7,shop:true}; }
+    doors[i]={x,z:-3.7,shop:'music'}; }
   else { const club=clubAtSlot(i);
     if(!club){ sign('COMING SOON','#8a8090','곧 새 클럽이 열려요','pixel'); doors[i]=null; }
     else { const sc=club.signColor||club.light;
@@ -757,7 +790,7 @@ function buildStreet(){
 
 /* ---------- applying a club's look ---------- */
 let cur='club', curClub=null, scene=clubScene;
-const BOUNDS={club:{x0:-6.4,x1:6.4,z0:-2.15,z1:5.4},street:{x0:-25,x1:24,z0:-4.1,z1:4.8}};
+const BOUNDS={club:{x0:-6.4,x1:6.4,z0:-2.15,z1:5.4},street:{x0:-31,x1:24,z0:-4.1,z1:4.8}};
 const baseCol=new THREE.Color(), tmpCol=new THREE.Color(), WHITE=new THREE.Color(0xffffff);
 const posterCache={};
 function inkFor(hex){const c=new THREE.Color(hex);const L=.2126*c.r+.7152*c.g+.0722*c.b;return L>.42?'#12080c':'#ffffff';}
@@ -873,7 +906,7 @@ function renderPL(){
   tick();}
 /* ---------- YouTube playback: everyone in a club plays the same song from the same second ---------- */
 const ytId=u=>{const m=String(u||'').match(/(?:[?&]v=|youtu\.be\/)([\w-]{11})/);return m?m[1]:null;};
-let yt=null, ytReady=false, ytLoading=null, ytLoadedId=null, lastP=0, lastSync=0, ytApi=null;
+let yt=null, ytReady=false, ytLoading=null, ytLoadedId=null, ytKey=null, lastP=0, lastSync=0, ytApi=null, wantPlay=false;
 function loadYtApi(){
   if(ytApi) return ytApi;
   ytApi=new Promise((res,rej)=>{
@@ -884,28 +917,39 @@ function loadYtApi(){
 function ensurePlayer(){
   if(ytLoading) return ytLoading;
   ytLoading=loadYtApi().then(()=>new Promise(res=>{
-    yt=new YT.Player('yt',{width:'100%',height:'100%',playerVars:{playsinline:1,rel:0,controls:1},
+    yt=new YT.Player('yt',{width:'100%',height:'100%',playerVars:{playsinline:1,rel:0,controls:0,disablekb:1,fs:0,iv_load_policy:3},
       events:{onReady:()=>{ytReady=true;res(yt);},
-        onStateChange:e=>{if(e.data===1){$('soundBtn').hidden=true;learnDuration();}},
+        onStateChange:e=>{
+          if(e.data===1){$('soundBtn').hidden=true;learnDuration();}
+          // a pause only ever happens on this one screen; the club keeps playing, so jump back to the live point
+          if(e.data===2&&wantPlay&&cur==='club') setTimeout(()=>{if(wantPlay&&yt.getPlayerState()===2){yt.seekTo(lastP,true);yt.playVideo();}},400);},
         onError:()=>{$('ytMsg').textContent='이 곡은 유튜브에서 다른 사이트 재생을 막아뒀어요. 다음 곡을 기다려 주세요.';}}});}))
     .catch(()=>{ytLoading=null;$('ytMsg').textContent='유튜브에 연결하지 못했어요. 새로고침해 주세요.';});
   return ytLoading;}
-function stopPlayback(){ytLoadedId=null;$('soundBtn').hidden=true;$('ytWrap').hidden=true;if(yt&&ytReady){try{yt.stopVideo();}catch(e){}}}
+function stopPlayback(){ytLoadedId=null;ytKey=null;wantPlay=false;$('soundBtn').hidden=true;$('ytWrap').hidden=true;if(yt&&ytReady){try{yt.stopVideo();}catch(e){}}}
 function syncPlayback(song,p){
   const id=ytId(song.u);
   if(!id){stopPlayback();$('ytMsg').textContent='이 곡은 유튜브 링크가 없어서 소리가 나지 않아요.'+(curClub===myClub?' 클럽 설정 > 플레이리스트에서 링크를 넣어주세요.':'');return;}
   $('ytWrap').hidden=false; if($('ytMsg').textContent.startsWith('이 곡은 유튜브 링크'))$('ytMsg').textContent='';
   if(!ytReady){ensurePlayer();return;}
-  if(ytLoadedId!==id){ytLoadedId=id;$('ytMsg').textContent='';yt.loadVideoById({videoId:id,startSeconds:Math.floor(p)});
+  const key=id+'@'+Math.round(Date.now()/1000-p);   // same song again (repeat) gets a new key and reloads
+  wantPlay=true;
+  if(ytKey!==key){ytKey=key;ytLoadedId=id;$('ytMsg').textContent='';yt.loadVideoById({videoId:id,startSeconds:Math.floor(p)});
     // browsers may block sound until the visitor taps once; offer a button if it didn't start
-    setTimeout(()=>{if(cur==='club'&&ytLoadedId===id&&yt.getPlayerState()!==1)$('soundBtn').hidden=false;},2500);return;}
-  const now=Date.now();
-  if(now-lastSync>8000){lastSync=now;if(yt.getPlayerState()===1&&Math.abs(yt.getCurrentTime()-p)>3)yt.seekTo(p,true);}}
+    setTimeout(()=>{if(cur==='club'&&ytKey===key&&yt.getPlayerState()!==1)$('soundBtn').hidden=false;},2500);return;}
+  const now=Date.now(), st=yt.getPlayerState();
+  if(now-lastSync>5000){lastSync=now;
+    if(st===1&&Math.abs(yt.getCurrentTime()-p)>2.5) yt.seekTo(p,true);
+    else if((st===2||st===5||st===-1)&&$('soundBtn').hidden){yt.seekTo(p,true);yt.playVideo();}}}
 $('soundBtn').addEventListener('click',()=>{if(!yt||!ytReady)return;yt.seekTo(lastP,true);yt.playVideo();$('soundBtn').hidden=true;});
+let screenBig=true; try{screenBig=localStorage.getItem('cs.screen')!=='small';}catch(e){}
+function applyScreen(){$('np').classList.toggle('big',screenBig);$('np').classList.toggle('small',!screenBig);$('sizeBtn').textContent=screenBig?'화면 작게':'화면 크게';}
+$('sizeBtn').addEventListener('click',()=>{screenBig=!screenBig;try{localStorage.setItem('cs.screen',screenBig?'big':'small');}catch(e){}applyScreen();});
+applyScreen();
 // the owner's songs added without a measured length get their real length the first time they play
 function learnDuration(){
-  if(!curClub||curClub!==myClub||curIdx<0)return; const song=myClub.set[curIdx]; if(!song||!song.auto||ytId(song.u)!==ytLoadedId)return;
-  const d=Math.round(yt.getDuration()); if(d>30){song.d=d;song.auto=false;saveMine();}}
+  if(!curClub||curIdx<0)return; const song=curClub.set[curIdx]; if(!song||!song.auto||ytId(song.u)!==ytLoadedId)return;
+  const d=Math.round(yt.getDuration()); if(d>30){song.d=d;song.auto=false; if(curClub===myClub){saveMine();if(!setModal.hidden)renderTList();} curIdx=-1; tick();}}
 // read a video's length without playing it (a muted, cued player off-screen, removed right after)
 function measureDuration(id){
   return loadYtApi().then(()=>new Promise(res=>{
@@ -913,7 +957,7 @@ function measureDuration(id){
     const inner=document.createElement('div'); holder.appendChild(inner); document.body.appendChild(holder);
     let done=false, pl=null; const fin=v=>{if(done)return;done=true;try{pl&&pl.destroy();}catch(e){}holder.remove();res(v);};
     pl=new YT.Player(inner,{width:200,height:200,videoId:id,playerVars:{mute:1},
-      events:{onReady:()=>{let n=20;const look=()=>{const d=pl.getDuration();if(d>0)fin(Math.round(d));else if(n-->0)setTimeout(look,300);else fin(0);};look();},
+      events:{onReady:()=>{let n=25;const look=()=>{const d=pl.getDuration();if(d>0)fin(Math.round(d));else if(n-->0){if(n===18){try{pl.mute();pl.playVideo();}catch(e){}}setTimeout(look,300);}else fin(0);};look();},
               onError:()=>fin(-1)}});
     setTimeout(()=>fin(0),10000);})).catch(()=>0);}
 function tick(){
@@ -928,7 +972,27 @@ function tick(){
 setInterval(tick,1000);
 
 /* ---------- doors ---------- */
-$('enter').addEventListener('click',()=>{if(!nearDoor)return;if(nearDoor.shop){openShop();return;}const c=nearDoor.club;go(()=>enterClub(c));});
+$('enter').addEventListener('click',()=>{if(!nearDoor)return;if(nearDoor.shop==='boutique'){openBoutique();return;}if(nearDoor.shop){openShop();return;}const c=nearDoor.club;go(()=>enterClub(c));});
+const kstDay=()=>new Date(Date.now()+9*3600e3).toISOString().slice(0,10);
+function openBoutique(){
+  $('nickNew').value=ME_NAME; $('nickErr').textContent='';
+  let last=null; if(!sb){try{last=localStorage.getItem('cs.nickDay.'+ME_ID);}catch(e){}}
+  const blocked=!isDev&&!sb&&last===kstDay();
+  $('nickHelp').textContent=isDev?'개발자 계정은 언제든 바꿀 수 있어요.':blocked?'오늘은 이미 바꿨어요. 내일 다시 바꿀 수 있어요.':'한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자. 닉네임은 하루에 한 번 바꿀 수 있어요.';
+  $('nickBtn').disabled=blocked; openModal($('boutModal'),'#nickNew');}
+function applyNick(n){
+  ME_NAME=n; me.name=n; me.tag.textContent=n; if(myClub){myClub.owner=n;}
+  if(!sb){try{const d=JSON.parse(localStorage.getItem('cs.demo')||'null');if(d){d.nick=n;localStorage.setItem('cs.demo',JSON.stringify(d));}}catch(e){}}}
+$('nickForm').addEventListener('submit',async e=>{e.preventDefault();const n=$('nickNew').value.trim(),err=$('nickErr'),btn=$('nickBtn');err.textContent='';
+  if(n===ME_NAME){err.textContent='지금 쓰고 있는 닉네임이에요.';return;}
+  if(!NICK_RE.test(n)){err.textContent='한글, 영문, 숫자, 점(.), 밑줄(_)로 2~12자예요.';return;}
+  if(!sb){ if(!isDev){try{localStorage.setItem('cs.nickDay.'+ME_ID,kstDay());}catch(e){}} applyNick(n); closeModal($('boutModal')); toast('이제 '+n+' 님이에요'); return; }
+  busy(btn,true,'바꾸는 중…');
+  const {data,error}=await sb.rpc('change_nickname',{p_nick:n});
+  busy(btn,false,'닉네임 바꾸기');
+  if(error){err.textContent='서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요.';return;}
+  if(data!=='ok'){err.textContent=data==='taken'?'이미 쓰고 있는 닉네임이에요.':data==='today'?'오늘은 이미 바꿨어요. 내일 다시 바꿀 수 있어요.':'쓸 수 없는 닉네임이에요.';return;}
+  applyNick(n); closeModal($('boutModal')); toast('이제 '+n+' 님이에요');});
 function openShop(){
   const has=!!myClub;
   $('shopLine').textContent=has?'어서 와요, '+ME_NAME+' 님. "'+myClub.name+'" 공연은 잘 되고 있죠? 필요한 건 클럽 설정에서 언제든 바꿀 수 있어요.'
@@ -945,8 +1009,8 @@ const setModal=$('setModal'), newModal=$('newModal'); let lastFocus;
 function openModal(m,focusSel){lastFocus=document.activeElement;m.hidden=false;setTimeout(()=>{const f=m.querySelector(focusSel);f&&f.focus();},30);}
 function closeModal(m){m.hidden=true;lastFocus&&lastFocus.focus&&lastFocus.focus();}
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeModal(b.closest('.modal'))));
-[setModal,newModal,$('shopModal')].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
-addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal,$('shopModal')].forEach(m=>{if(!m.hidden)closeModal(m);});});
+[setModal,newModal,$('shopModal'),$('boutModal')].forEach(m=>m.addEventListener('pointerdown',e=>{if(e.target===m)closeModal(m);}));
+addEventListener('keydown',e=>{if(e.key==='Escape')[setModal,newModal,$('shopModal'),$('boutModal')].forEach(m=>{if(!m.hidden)closeModal(m);});});
 function showTab(name){document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===name)));
   document.querySelectorAll('#setModal [data-pane]').forEach(p=>p.hidden=p.dataset.pane!==name);}
 document.querySelectorAll('#setModal [data-tab]').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
@@ -1082,7 +1146,7 @@ function step(now){
     if(g.bubble){if(now>g.bubbleUntil){g.bubble.remove();g.bubble=null;}else{g.bubble.style.left=sx+'px';g.bubble.style.top=(sy-26)+'px';}}});
   if(cur==='street'){
     let best=null,bd=1.7; doors.forEach(d=>{if(!d)return;const dd=Math.hypot(d.x-me.pos.x,(d.z-me.pos.z)*.8);if(dd<bd){bd=dd;best=d;}});
-    if(best!==nearDoor){nearDoor=best;const e=$('enter');if(best){e.textContent=best.shop?(myClub?'악기점 · 들러보기':'악기점 · 라이브클럽 오픈하기'):best.club.name+' 입장하기';e.hidden=false;}else e.hidden=true;}
+    if(best!==nearDoor){nearDoor=best;const e=$('enter');if(best){e.textContent=best.shop==='boutique'?'옷가게 · 들어가기':best.shop?(myClub?'악기점 · 들러보기':'악기점 · 라이브클럽 오픈하기'):best.club.name+' 입장하기';e.hidden=false;}else e.hidden=true;}
   } else if(curClub){
     const p=reduce?'steady':curClub.pattern; tmpCol.copy(baseCol);
     if(p==='shift') tmpCol.offsetHSL(Math.sin(t*.25)*.12,0,0);

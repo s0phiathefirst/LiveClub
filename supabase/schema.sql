@@ -67,3 +67,24 @@ language sql stable security definer set search_path = public as $$
 $$;
 revoke all on function public.check_available(text, text) from public;
 grant execute on function public.check_available(text, text) to anon, authenticated;
+
+-- 6. nickname changes (boutique): once per calendar day in Korea time, the developer any time
+alter table public.profiles add column if not exists nick_changed_at timestamptz;
+create or replace function public.change_nickname(p_nick text) returns text
+language plpgsql security definer set search_path = public as $$
+declare me uuid := auth.uid(); prof public.profiles;
+begin
+  if me is null then return 'auth'; end if;
+  if p_nick is null or p_nick !~ '^[가-힣A-Za-z0-9._]{2,12}$' then return 'invalid'; end if;
+  select * into prof from public.profiles where id = me for update;
+  if not prof.is_dev and prof.nick_changed_at is not null
+     and (prof.nick_changed_at at time zone 'Asia/Seoul')::date = (now() at time zone 'Asia/Seoul')::date then
+    return 'today';
+  end if;
+  if exists (select 1 from public.profiles where lower(nickname) = lower(p_nick) and id <> me) then return 'taken'; end if;
+  update public.profiles set nickname = p_nick, nick_changed_at = now() where id = me;
+  return 'ok';
+exception when unique_violation then return 'taken';
+end $$;
+revoke all on function public.change_nickname(text) from public;
+grant execute on function public.change_nickname(text) to authenticated;
